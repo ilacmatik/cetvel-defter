@@ -1,0 +1,62 @@
+{
+  "id": "./",
+  "name": "Cetvel",
+  "short_name": "Cetvel",
+  "description": "Formüllü, grafikli tablo programı. Excel dosyalarını açar ve kaydeder.",
+  "lang": "tr",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone"
+  ],
+  "background_color": "#f2f4f1",
+  "theme_color": "#16704c",
+  "categories": [
+    "productivity",
+    "business"
+  ],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "./",
+      "accept": {
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
+          ".xlsx"
+        ],
+        "application/vnd.ms-excel": [
+          ".xls"
+        ],
+        "text/csv": [
+          ".csv"
+        ],
+        "application/vnd.oasis.opendocument.spreadsheet": [
+          ".ods"
+        ]
+      }
+    }
+  ],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  }
+}

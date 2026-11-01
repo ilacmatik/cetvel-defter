@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cetvel ve Defter</title>
+<meta name="description" content="Bilgisayara kurulabilen, ücretsiz ve Türkçe tablo (Cetvel) ve yazı (Defter) programları.">
+<link rel="icon" type="image/png" href="cetvel/icons/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: tek sütun; başlık, iki uygulama kartı, kurulum adımları */
+:root{--bg:#f3f4f6;--surface:#fff;--line:#d9dde3;--fg:#161b22;--muted:#5a6472;--green:#16704c;--blue:#2457b8;
+  --ui:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"IBM Plex Mono",Consolas,monospace}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101318;--surface:#171b22;--line:#2a313c;--fg:#e5e9ef;--muted:#9aa4b2;--green:#4cc28f;--blue:#78a4f3;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#101318;--surface:#171b22;--line:#2a313c;--fg:#e5e9ef;--muted:#9aa4b2;--green:#4cc28f;--blue:#78a4f3;color-scheme:dark}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font:16px/1.55 var(--ui)}
+.wrap{max-width:880px;margin:0 auto;padding-block:48px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.15;letter-spacing:-.02em;margin:0 0 10px;text-wrap:balance}
+.lead{color:var(--muted);max-width:62ch;margin:0 0 32px;font-size:17px}
+.apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:16px}
+.app{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.app header{display:flex;gap:14px;align-items:center}
+.app img{width:64px;height:64px;flex:none}
+.app h2{margin:0;font-size:24px;letter-spacing:-.01em}
+.app .kind{color:var(--muted);font-size:14px}
+.app ul{margin:0;padding-left:1.1em;color:var(--fg)}
+.app li{margin:2px 0}
+.app .go{margin-top:auto;display:inline-flex;align-items:center;justify-content:center;height:44px;border-radius:8px;color:#fff;font-weight:600;text-decoration:none;font-size:16px}
+.cetvel .go{background:#16704c}.defter .go{background:#2457b8}
+.go:focus-visible{outline:3px solid var(--fg);outline-offset:2px}
+section.steps{margin-top:44px}
+section.steps h2{font-size:20px;margin:0 0 12px}
+ol.st{counter-reset:s;list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:12px}
+ol.st li{counter-increment:s;display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start}
+ol.st li::before{content:counter(s);width:30px;height:30px;border-radius:50%;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;font-weight:600;font-size:14px}
+ol.st b{font-weight:600}
+.note{margin-top:28px;padding:14px 16px;border-radius:10px;background:var(--surface);border:1px solid var(--line);color:var(--muted);font-size:15px}
+.note b{color:var(--fg)}
+kbd{font-family:var(--mono);font-size:13px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--surface)}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1>Cetvel ve Defter</h1>
+  <p class="lead">Bilgisayarına program gibi kurabileceğin, ücretsiz ve tamamen Türkçe iki ofis programı. Kurulumdan sonra internet olmadan da açılırlar. Belgelerin yalnızca kendi bilgisayarında saklanır.</p>
+
+  <div class="apps">
+    <article class="app cetvel">
+      <header><img src="cetvel/icons/icon-192.png" alt=""><div><h2>Cetvel</h2><div class="kind">Tablo programı · Excel ile uyumlu</div></div></header>
+      <ul>
+        <li>70'ten fazla Türkçe fonksiyon: TOPLA, EĞER, DÜŞEYARA, ETOPLA…</li>
+        <li>Doldurma tutamacı, filtre, sıralama, bölme dondurma</li>
+        <li>Sütun, çizgi ve pasta grafikleri</li>
+        <li>.xlsx ve .csv açar, Excel dosyası olarak kaydeder</li>
+      </ul>
+      <a class="go" href="cetvel/">Cetvel'i aç ve yükle</a>
+    </article>
+    <article class="app defter">
+      <header><img src="defter/icons/icon-192.png" alt=""><div><h2>Defter</h2><div class="kind">Yazı programı · Word ile uyumlu</div></div></header>
+      <ul>
+        <li>Sayfa görünümü, kenar boşlukları, sayfa sonu ve numarası</li>
+        <li>Satır ve paragraf aralığı, biçim boyacısı, tablo ve resim</li>
+        <li>Dilekçe, mektup ve özgeçmiş şablonları</li>
+        <li>.docx açar, Word dosyası ve PDF olarak kaydeder</li>
+      </ul>
+      <a class="go" href="defter/">Defter'i aç ve yükle</a>
+    </article>
+  </div>
+
+  <section class="steps">
+    <h2>Bilgisayara kurulum (Edge veya Chrome)</h2>
+    <ol class="st">
+      <li><span>Yukarıdan programın düğmesine tıkla. Program tarayıcıda açılır.</span></li>
+      <li><span>Sağ üstte yeşil veya mavi <b>Uygulamayı yükle</b> düğmesine bas. Düğme görünmüyorsa adres çubuğunun sağındaki <b>yükle</b> simgesine (ekranlı ok) veya menüde <b>Uygulamalar → Bu siteyi uygulama olarak yükle</b> seçeneğine tıkla.</span></li>
+      <li><span>Açılan pencerede <b>Yükle</b>'ye bas. Program Başlat menüsüne ve masaüstüne kendi simgesiyle eklenir, ayrı bir pencerede açılır.</span></li>
+      <li><span>İstersen görev çubuğuna sabitle. Kaldırmak için programın içinde sağ üstteki <b>⋯</b> menüsünden <b>Kaldır</b>'ı seç.</span></li>
+    </ol>
+    <p class="note"><b>Neden setup.exe değil?</b> Windows'taki Akıllı Uygulama Denetimi, ücretli sertifikayla imzalanmamış kurulum dosyalarını engelliyor. Bu yöntemle program yine Başlat menüsüne, masaüstüne ve görev çubuğuna kurulur ama Windows tarafından engellenmez.<br><br>
+    <b>Belgelerin nerede?</b> Bilgisayarında, programın kendi alanında. Arada bir <b>Dosya → Yedek al</b> ile yedek almanı öneririz.</p>
+  </section>
+</main>
+</body>
+</html>

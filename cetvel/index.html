@@ -1,0 +1,1620 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cetvel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Cetvel: formüllü, grafikli tablo programı">
+<meta name="theme-color" content="#16704c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tinos:ital,wght@0,400;0,700;1,400;1,700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+[hidden]{display:none!important}
+html,body{margin:0;height:100%}
+img{max-width:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}
+/* Layout: tek ekranlık uygulama: üst çubuk, şerit araç çubuğu, formül çubuğu, ızgara, sayfa sekmeleri */
+:root{
+  --bg:#f2f4f1;--surface:#ffffff;--head:#e8ebe6;--grid:#d6dbd4;--fg:#17201a;--muted:#56625a;--ink:#1d2620;
+  --accent:#16704c;--accent-fg:#ffffff;--sel:rgba(22,112,76,.13);--headact:#cfe5d7;--err:#b3261e;--hover:#e1e6df;
+  --font:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111513;--surface:#171c19;--head:#1e2421;--grid:#2c3430;--fg:#e5ebe7;--muted:#9ba7a0;--ink:#d7e0da;
+  --accent:#4cc28f;--accent-fg:#0c1a13;--sel:rgba(76,194,143,.17);--headact:#24402f;--err:#ff8a80;--hover:#252c28;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111513;--surface:#171c19;--head:#1e2421;--grid:#2c3430;--fg:#e5ebe7;--muted:#9ba7a0;--ink:#d7e0da;
+  --accent:#4cc28f;--accent-fg:#0c1a13;--sel:rgba(76,194,143,.17);--headact:#24402f;--err:#ff8a80;--hover:#252c28;color-scheme:dark}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:15px}
+.app{height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.brand{font-weight:600;font-size:19px;letter-spacing:-.01em;display:flex;align-items:center;gap:9px}
+.brand img{width:30px;height:30px;display:block}
+.top .spacer{flex:1}
+.saved{color:var(--muted);font-size:13px}
+.bar{display:flex;gap:4px;align-items:center;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px;scrollbar-width:thin}
+.grp{display:flex;gap:2px;align-items:center;padding-right:6px;margin-right:2px;border-right:1px solid var(--grid);flex:none}
+.grp:last-child{border-right:0}
+select{max-width:160px}
+#sBorder,#sFmt,#sStruct,#sFreeze{width:118px}
+button,select{font:inherit;font-size:14px;color:var(--fg);background:var(--surface);border:1px solid var(--grid);
+  border-radius:6px;height:36px;min-width:36px;padding:0 9px;cursor:pointer;flex:none;white-space:nowrap}
+button:hover,select:hover{background:var(--hover)}
+button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button svg{width:18px;height:18px;vertical-align:-4px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:500}
+.primary:hover{background:var(--accent);filter:brightness(1.08)}
+.color{position:relative;display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;box-sizing:border-box;
+  border:1px solid var(--grid);border-radius:6px;background:var(--surface);cursor:pointer;font-weight:600}
+.color:hover{background:var(--hover)}
+.color input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.color .sw{display:block;line-height:1.1;border-bottom:4px solid var(--sw);padding:0 2px}
+.color .bucket{display:block;width:18px;height:14px;border-radius:3px;background:var(--sw);border:1px solid var(--grid)}
+/* menü */
+.menu{position:fixed;z-index:40;min-width:230px;background:var(--surface);color:var(--fg);border:1px solid var(--grid);border-radius:8px;
+  padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.2);display:flex;flex-direction:column}
+.menu button{border:0;background:transparent;text-align:left;height:36px;display:flex;align-items:center;gap:10px;justify-content:space-between}
+.menu button:hover{background:var(--hover)}
+.menu kbd{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.menu hr{border:0;border-top:1px solid var(--grid);margin:4px 2px}
+/* formül çubuğu */
+.fxbar{display:flex;gap:6px;align-items:stretch}
+#namebox{width:96px;flex:none;font-family:var(--mono);font-size:14px;text-align:center}
+#bFx{font-style:italic;font-family:Georgia,serif;font-size:16px;color:var(--muted);height:38px}
+#fx{flex:1;min-width:0;font-family:var(--mono);font-size:15px}
+.fxbar input{height:38px;box-sizing:border-box;border:1px solid var(--grid);border-radius:6px;background:var(--surface);color:var(--fg);padding:0 10px}
+#findbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:var(--surface);border:1px solid var(--grid);border-radius:8px;padding:6px}
+#findbar input{height:34px;box-sizing:border-box;border:1px solid var(--grid);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit;padding:0 10px;width:180px;min-width:0}
+#fcount{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums;min-width:70px}
+/* ızgara */
+#wrap{flex:1;min-height:0;overflow:auto;position:relative;background:var(--surface);border:1px solid var(--grid);border-radius:8px;overscroll-behavior:contain}
+#sheet{position:relative;width:max-content}
+#grid{border-collapse:separate;border-spacing:0;table-layout:fixed;font-variant-numeric:tabular-nums;user-select:none;-webkit-user-select:none;width:max-content}
+#grid th,#grid td{height:30px;box-sizing:border-box;border-right:1px solid var(--grid);border-bottom:1px solid var(--grid);
+  padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#grid thead th{position:sticky;top:0;z-index:5;background:var(--head);color:var(--muted);font-weight:500;font-size:13px;text-align:center;cursor:s-resize}
+#grid th.rh{position:sticky;left:0;z-index:3;background:var(--head);color:var(--muted);font-weight:500;font-size:13px;text-align:center;padding:0;cursor:e-resize}
+#grid th.corner{left:0;z-index:6;cursor:default}
+#grid th.hl{background:var(--headact);color:var(--fg)}
+#grid td{cursor:cell;box-shadow:var(--bd,none);font-size:11pt}
+#grid td.n{text-align:right}
+#grid td.b{font-weight:600}
+#grid td.i{font-style:italic}
+#grid td.u{text-decoration:underline}
+#grid td.wr{white-space:normal;word-break:break-word;text-overflow:clip;line-height:1.3;padding-block:4px}
+#grid td.err{color:var(--err);text-align:center}
+#grid td.sel{background-image:linear-gradient(var(--sel),var(--sel))}
+#grid td.act{box-shadow:inset 0 0 0 2px var(--accent)}
+.fbtn{position:absolute;right:3px;top:50%;transform:translateY(-50%);width:20px;height:20px;border-radius:4px;border:1px solid var(--grid);
+  background:var(--surface);color:var(--muted);display:grid;place-items:center;font-size:11px;cursor:pointer;line-height:1}
+.fbtn.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.rz{position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:1}
+#editor{position:absolute;z-index:9;box-sizing:border-box;margin:0;border:2px solid var(--accent);padding:0 6px;
+  font:inherit;font-size:15px;background:var(--surface);color:var(--fg);outline:none;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+#fillh{position:absolute;z-index:7;width:9px;height:9px;background:var(--accent);border:2px solid var(--surface);box-sizing:content-box;cursor:crosshair;touch-action:none}
+#fillprev{position:absolute;z-index:7;border:2px dashed var(--accent);pointer-events:none;box-sizing:border-box}
+/* grafikler */
+#charts{position:absolute;left:0;top:0;width:0;height:0;z-index:4}
+.chart{position:absolute;background:var(--surface);border:1px solid var(--grid);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.14);display:flex;flex-direction:column;overflow:hidden}
+.chart header{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 10px;border-bottom:1px solid var(--grid);cursor:move;touch-action:none;background:var(--head)}
+.chart header input.ct{flex:1;min-width:40px;font:inherit;font-weight:600;font-size:14px;border:1px solid transparent;background:transparent;color:var(--fg);border-radius:4px;padding:2px 4px}
+.chart header input.ct:focus{border-color:var(--accent);background:var(--surface);outline:none}
+.chart header input.cr{width:84px;font-family:var(--mono);font-size:12px;height:28px;box-sizing:border-box;border:1px solid var(--grid);border-radius:4px;background:var(--surface);color:var(--fg);padding:0 6px}
+.chart header select,.chart header button{height:28px;font-size:13px;padding:0 6px;min-width:28px}
+.chart .cbody{flex:1;min-height:0}
+.chart svg{display:block;width:100%;height:100%}
+.chart .crz{position:absolute;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;touch-action:none;
+  background:linear-gradient(135deg,transparent 50%,var(--muted) 50%,var(--muted) 60%,transparent 60%,transparent 72%,var(--muted) 72%,var(--muted) 82%,transparent 82%)}
+/* alt */
+.foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#tabs{display:flex;gap:4px;overflow-x:auto;flex:1;min-width:0}
+.tab{display:flex;align-items:center;gap:6px}
+.tab[aria-pressed="true"]{background:var(--surface);color:var(--fg);border-color:var(--accent);box-shadow:inset 0 -3px 0 var(--accent)}
+.tab .x{font-size:13px;color:var(--muted);padding:2px 4px;border-radius:4px}
+.tab .x:hover{background:var(--hover);color:var(--err)}
+.tab input{font:inherit;width:110px;border:0;background:transparent;color:var(--fg);outline:none}
+#status{color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap}
+#status b{color:var(--fg);font-weight:600}
+/* açılır pencereler */
+.pop{position:fixed;z-index:40;background:var(--surface);color:var(--fg);border:1px solid var(--grid);border-radius:8px;padding:10px;box-shadow:0 12px 32px rgba(0,0,0,.2);box-sizing:border-box}
+#filterPop{width:260px;max-width:calc(100vw - 24px);display:flex;flex-direction:column;gap:8px}
+#filterPop input[type=search]{height:32px;border:1px solid var(--grid);border-radius:6px;background:var(--bg);color:var(--fg);font:inherit;padding:0 8px}
+#fvals{max-height:220px;overflow:auto;display:flex;flex-direction:column;border:1px solid var(--grid);border-radius:6px;padding:4px}
+#fvals label{display:flex;gap:8px;align-items:center;padding:4px 6px;border-radius:4px;font-size:14px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#fvals label:hover{background:var(--hover)}
+.prow{display:flex;gap:6px;flex-wrap:wrap}
+.prow button{flex:1}
+#ac{position:fixed;z-index:45;background:var(--surface);border:1px solid var(--grid);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.22);
+  max-height:260px;overflow:auto;min-width:300px;max-width:min(460px,calc(100vw - 24px));padding:4px}
+#ac div{padding:6px 8px;border-radius:5px;cursor:pointer;display:flex;flex-direction:column;gap:1px}
+#ac div b{font-family:var(--mono);font-size:13px;font-weight:600}
+#ac div span{font-size:12px;color:var(--muted)}
+#ac div.on{background:var(--sel)}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;
+  background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:14px;max-width:min(90vw,520px);text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.modal{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;
+  padding:16px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px))}
+.modal .card{background:var(--surface);color:var(--fg);border-radius:10px;max-width:720px;width:100%;max-height:86vh;overflow:auto;padding:20px 22px;box-sizing:border-box}
+.modal h2{margin:0 0 4px;font-size:19px;text-wrap:balance}
+.modal h3{margin:18px 0 6px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.modal p{margin:0 0 6px;color:var(--muted);line-height:1.5}
+.modal table{border-collapse:collapse;width:100%;font-size:14px}
+.modal td{padding:5px 8px 5px 0;border-bottom:1px solid var(--grid);vertical-align:top}
+.modal code,.modal kbd{font-family:var(--mono);font-size:13px;background:var(--head);padding:1px 5px;border-radius:4px}
+.modal .close{float:right}
+.modal .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+#printArea{display:none}
+@media (prefers-reduced-motion:no-preference){#toast{animation:up .18s ease-out}@keyframes up{from{opacity:0;transform:translate(-50%,8px)}}}
+@media (max-width:560px){.top .saved{display:none}#namebox{width:70px}}
+@media print{
+  body{background:#fff;color:#000}.app,#toast,.menu,.pop,#ac,.modal{display:none!important}
+  #printArea{display:block}
+  #printArea h1{font:600 14pt var(--font);margin:0 0 8pt}
+  #printArea table{border-collapse:collapse;font-family:var(--font);font-size:10pt}
+  #printArea td{border:0.5pt solid #bbb;padding:2pt 5pt;white-space:nowrap}
+  #printArea .pc{break-inside:avoid;margin-top:12pt}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand"><img src="icons/icon-192.png" alt="">Cetvel</div>
+    <button type="button" id="bFile" aria-haspopup="menu">Dosya ▾</button>
+    <span class="saved" id="saved">Değişiklikler otomatik kaydedilir</span>
+    <span class="spacer"></span>
+    <button type="button" id="bInstall" class="primary" hidden>Uygulamayı yükle</button>
+    <button type="button" id="bExport" class="primary">Excel olarak indir</button>
+    <button type="button" id="bHelp">Yardım</button>
+    <input type="file" id="file" accept=".xlsx,.xls,.csv,.ods" hidden>
+    <input type="file" id="fileBackup" accept=".json,application/json" hidden>
+  </header>
+
+  <div class="bar" role="toolbar" aria-label="Biçimlendirme">
+    <div class="grp">
+      <button type="button" id="bUndo" title="Geri al (Ctrl+Z)" aria-label="Geri al">↶</button>
+      <button type="button" id="bRedo" title="Yinele (Ctrl+Y)" aria-label="Yinele">↷</button>
+    </div>
+    <div class="grp">
+      <select id="sFont" aria-label="Yazı tipi" title="Yazı tipi">
+        <option value="">Yazı tipi</option><option value="tnr">Times New Roman</option><option value="calibri">Calibri</option><option value="arial">Arial</option><option value="georgia">Georgia</option><option value="courier">Courier New</option>
+      </select>
+      <select id="sSize" aria-label="Yazı boyutu (punto)" title="Yazı boyutu (punto)">
+        <option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="14">14</option><option value="16">16</option><option value="18">18</option><option value="20">20</option><option value="24">24</option><option value="28">28</option><option value="36">36</option>
+      </select>
+    </div>
+    <div class="grp">
+      <button type="button" id="bBold" title="Kalın (Ctrl+B)" aria-label="Kalın" aria-pressed="false"><b>K</b></button>
+      <button type="button" id="bItal" title="İtalik (Ctrl+I)" aria-label="İtalik" aria-pressed="false"><i style="font-family:Georgia,serif">T</i></button>
+      <button type="button" id="bUnder" title="Altı çizili (Ctrl+U)" aria-label="Altı çizili" aria-pressed="false"><u>A</u></button>
+      <label class="color" title="Yazı rengi"><span class="sw" id="swFc" style="--sw:#c62828">A</span><input type="color" id="cFc" value="#c62828" aria-label="Yazı rengi"></label>
+      <label class="color" title="Dolgu rengi"><span class="bucket" id="swBg" style="--sw:#fff0a3"></span><input type="color" id="cBg" value="#fff0a3" aria-label="Dolgu rengi"></label>
+      <select id="sBorder" aria-label="Kenarlık" title="Kenarlık">
+        <option value="">Kenarlık</option><option value="all">Tüm kenarlıklar</option><option value="outer">Dış kenarlıklar</option><option value="thick">Kalın dış kenarlık</option><option value="bottom">Alt kenarlık</option><option value="dbottom">Kalın alt kenarlık</option><option value="none">Kenarlığı kaldır</option><option value="nofill">Dolguyu kaldır</option>
+      </select>
+    </div>
+    <div class="grp">
+      <button type="button" data-al="left" title="Sola hizala" aria-label="Sola hizala" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h14"/></svg></button>
+      <button type="button" data-al="center" title="Ortala" aria-label="Ortala" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M5 18h14"/></svg></button>
+      <button type="button" data-al="right" title="Sağa hizala" aria-label="Sağa hizala" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 6h16M10 12h10M6 18h14"/></svg></button>
+      <button type="button" id="bWrap" title="Metni kaydır" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h13a3 3 0 0 1 0 6h-4m2-2-2 2 2 2M4 18h5"/></svg></button>
+      <button type="button" id="bMerge" title="Birleştir ve ortala" aria-pressed="false"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="1.5"/><path d="M7 12h10M9 10l-2 2 2 2M15 10l2 2-2 2"/></svg></button>
+    </div>
+    <div class="grp">
+      <select id="sFmt" aria-label="Sayı biçimi" title="Sayı biçimi">
+        <option value="">Genel</option><option value="num">Sayı 1.234,56</option><option value="int">Tamsayı 1.235</option><option value="cur">Para ₺</option><option value="pct">Yüzde %</option><option value="date">Tarih 01.11.2026</option><option value="datel">Uzun tarih</option><option value="text">Metin</option>
+      </select>
+      <button type="button" id="bDecDn" title="Ondalık azalt">,0←</button>
+      <button type="button" id="bDecUp" title="Ondalık artır">,00→</button>
+    </div>
+    <div class="grp">
+      <button type="button" id="bAsc" title="Artan sırala (A→Z)">A→Z</button>
+      <button type="button" id="bDesc" title="Azalan sırala (Z→A)">Z→A</button>
+      <button type="button" id="bFilter" title="Filtre (Ctrl+Shift+L)" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 5h16l-6 7v6l-4 2v-8z"/></svg> Filtre</button>
+      <select id="sStruct" aria-label="Satır ve sütun" title="Satır ve sütun">
+        <option value="">Satır / Sütun</option><option value="ir">Üste satır ekle</option><option value="ib">Alta satır ekle</option><option value="dr">Satırı sil</option>
+        <option value="ic">Sola sütun ekle</option><option value="ia">Sağa sütun ekle</option><option value="dc">Sütunu sil</option>
+      </select>
+      <select id="sFreeze" aria-label="Bölmeleri dondur" title="Bölmeleri dondur">
+        <option value="">Dondur</option><option value="row">Üst satırı dondur</option><option value="col">İlk sütunu dondur</option><option value="sel">Seçili hücreye göre dondur</option><option value="none">Dondurmayı kaldır</option>
+      </select>
+    </div>
+    <div class="grp">
+      <button type="button" id="bSum" title="Otomatik toplam (Alt+=)">Σ Topla</button>
+      <button type="button" id="bChart" title="Seçili verilerden grafik oluştur"><svg viewBox="0 0 24 24"><path d="M4 20V4M4 20h16M8 16v-5M12 16V8M16 16v-3"/></svg> Grafik</button>
+      <button type="button" id="bFind" title="Bul ve değiştir (Ctrl+F)">Bul</button>
+      <select id="sZoom" aria-label="Yakınlaştırma" title="Yakınlaştırma"><option value="0.75">%75</option><option value="0.9">%90</option><option value="1" selected>%100</option><option value="1.25">%125</option><option value="1.5">%150</option></select>
+    </div>
+  </div>
+
+  <div id="findbar" hidden>
+    <input id="fIn" placeholder="Bul" aria-label="Aranacak metin" spellcheck="false">
+    <input id="rIn" placeholder="Şununla değiştir" aria-label="Yeni metin" spellcheck="false">
+    <button type="button" id="fNext">Sonraki</button>
+    <button type="button" id="fRep">Değiştir</button>
+    <button type="button" id="fAll">Tümünü değiştir</button>
+    <span id="fcount" aria-live="polite"></span>
+    <button type="button" id="fClose" aria-label="Bul çubuğunu kapat">✕</button>
+  </div>
+
+  <div class="fxbar">
+    <input id="namebox" aria-label="Hücre adresi" spellcheck="false" autocomplete="off">
+    <button type="button" id="bFx" title="Fonksiyon ekle">fx</button>
+    <input id="fx" aria-label="Hücre içeriği veya formül" spellcheck="false" autocomplete="off" placeholder="Değer veya =TOPLA(B2:B6)">
+  </div>
+
+  <div id="wrap">
+    <div id="sheet">
+      <table id="grid" aria-label="Tablo"></table>
+      <div id="charts"></div>
+      <div id="fillh" title="Doldurmak için sürükle"></div>
+      <div id="fillprev" hidden></div>
+      <input id="editor" hidden spellcheck="false" autocomplete="off" aria-label="Hücreyi düzenle">
+    </div>
+  </div>
+
+  <footer class="foot">
+    <div id="tabs" role="tablist" aria-label="Sayfalar"></div>
+    <div id="status" aria-live="polite"></div>
+  </footer>
+</div>
+
+<div class="menu" id="fileMenu" role="menu" hidden>
+  <button type="button" data-m="new" role="menuitem">Yeni boş çalışma kitabı</button>
+  <button type="button" data-m="open" role="menuitem">Excel veya CSV dosyası aç <kbd>Ctrl+O</kbd></button>
+  <hr>
+  <button type="button" data-m="xlsx" role="menuitem">Excel olarak indir (.xlsx)</button>
+  <button type="button" data-m="csv" role="menuitem">Bu sayfayı CSV olarak indir</button>
+  <button type="button" data-m="copycsv" role="menuitem">Bu sayfayı panoya kopyala</button>
+  <button type="button" data-m="print" role="menuitem">Yazdır veya PDF kaydet <kbd>Ctrl+P</kbd></button>
+  <hr>
+  <button type="button" data-m="backup" role="menuitem">Yedek al (.json)</button>
+  <button type="button" data-m="restore" role="menuitem">Yedekten geri yükle</button>
+</div>
+
+<div class="pop" id="filterPop" hidden role="dialog" aria-label="Filtre">
+  <div class="prow"><button type="button" id="fpAsc">A→Z sırala</button><button type="button" id="fpDesc">Z→A sırala</button></div>
+  <input type="search" id="fpSearch" placeholder="Değerlerde ara" aria-label="Değerlerde ara">
+  <div id="fvals"></div>
+  <div class="prow"><button type="button" id="fpClear">Filtreyi temizle</button><button type="button" id="fpOk" class="primary">Tamam</button></div>
+</div>
+
+<div id="ac" hidden role="listbox" aria-label="Fonksiyon önerileri"></div>
+<div id="toast" hidden role="status"></div>
+<div id="printArea"></div>
+
+<div class="modal" id="confirmBox" hidden>
+  <div class="card" role="alertdialog" aria-modal="true" aria-labelledby="cfT" style="max-width:420px">
+    <h2 id="cfT">Emin misin?</h2>
+    <p id="cfMsg"></p>
+    <div class="actions"><button type="button" id="cfNo">Vazgeç</button><button type="button" id="cfYes" class="primary">Devam et</button></div>
+  </div>
+</div>
+
+<div class="modal" id="help" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="helpT">
+    <button type="button" class="close" id="helpClose">Kapat</button>
+    <h2 id="helpT">Cetvel kullanım rehberi</h2>
+    <p>Formül <code>=</code> ile başlar. Bağımsız değişkenleri <code>;</code> ile ayır, ondalık için virgül kullan: <code>=YUVARLA(B2*1,18;2)</code>. Yazmaya başlayınca fonksiyon önerileri çıkar. İngilizce adlar (SUM, VLOOKUP) da çalışır.</p>
+    <div id="fnHelp"></div>
+    <h3>İpuçları</h3>
+    <table>
+      <tr><td>Doldurma tutamacı</td><td>Seçimin sağ altındaki küçük kareyi sürükle. 1, 2 yazıp sürüklersen 3, 4, 5 diye devam eder. Tarihler, "Ocak" ve "Pazartesi" gibi adlar da seri olarak dolar. Formüller hedefe göre kayar.</td></tr>
+      <tr><td>Tarih</td><td><code>01.11.2026</code> şeklinde yaz. Tarihlerle hesap yapabilirsin: <code>=A2+30</code></td></tr>
+      <tr><td>Filtre</td><td>Başlık satırında bir hücre seçip Filtre'ye bas. Başlıklardaki ▾ düğmesiyle değer seç veya sırala.</td></tr>
+      <tr><td>Grafik</td><td>Başlıklarıyla birlikte verileri seçip Grafik'e bas. Grafiği başlığından sürükle, sağ alt köşesinden boyutlandır.</td></tr>
+      <tr><td>Dondur</td><td>"Üst satırı dondur" ile kaydırırken başlıklar hep görünür kalır.</td></tr>
+    </table>
+    <h3>Kısayollar</h3>
+    <table>
+      <tr><td><kbd>Enter</kbd> / <kbd>Tab</kbd></td><td>Kaydet ve aşağı / sağa geç</td></tr>
+      <tr><td><kbd>F2</kbd> veya çift tıklama</td><td>Hücreyi düzenle</td></tr>
+      <tr><td><kbd>Shift</kbd> + ok tuşları</td><td>Aralık seç</td></tr>
+      <tr><td><kbd>Ctrl</kbd> + ok tuşları</td><td>Veri bloğunun sonuna git</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd></td><td>Kopyala, kes, yapıştır (Excel'den yapıştırma da çalışır)</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>D</kbd> / <kbd>R</kbd></td><td>Aşağı / sağa doldur</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Y</kbd></td><td>Geri al / yinele</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>I</kbd> / <kbd>U</kbd></td><td>Kalın / italik / altı çizili</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>F</kbd></td><td>Bul ve değiştir</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd></td><td>Filtreyi aç / kapat</td></tr>
+      <tr><td><kbd>Alt</kbd>+<kbd>=</kbd></td><td>Otomatik toplam</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>;</kbd></td><td>Bugünün tarihini yaz</td></tr>
+      <tr><td><kbd>Delete</kbd></td><td>Seçili hücreleri temizle</td></tr>
+    </table>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(()=>{
+"use strict";
+/* ================= yardımcılar ================= */
+const $=id=>document.getElementById(id);
+const colName=n=>{let s='';n++;while(n>0){const m=(n-1)%26;s=String.fromCharCode(65+m)+s;n=Math.floor((n-1)/26)}return s};
+const colIndex=s=>{s=s.toUpperCase();let n=0;for(const ch of s)n=n*26+(ch.charCodeAt(0)-64);return n-1};
+const key=(r,c)=>colName(c)+(r+1);
+const parseKey=k=>{const m=k.match(/^([A-Z]+)(\d+)$/);return{r:+m[2]-1,c:colIndex(m[1])}};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let framed=true;try{framed=window.top!==window.self}catch(e){}
+let toastT;function toast(m){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,3400)}
+function ask(msg,yes){$('cfMsg').textContent=msg;$('confirmBox').hidden=false;$('cfYes').focus();
+  $('cfYes').onclick=()=>{$('confirmBox').hidden=true;yes()};$('cfNo').onclick=()=>{$('confirmBox').hidden=true}}
+
+/* ================= durum ================= */
+const KEY='cetvel-v1',OLDKEY='defter-tablo-v1';
+const FILLMAP={y:'#fff0a3',g:'#cfeedb',b:'#d6e4fb',r:'#fbd4cf',p:'#e7ddf7'};
+function blankSheet(name){return{name,rows:200,cols:26,cells:{},colW:{},merges:[],freeze:{r:0,c:0},filter:null,charts:[]}}
+function upgrade(s){
+  s.rows=Math.max(s.rows||100,100);s.cols=Math.max(s.cols||26,26);s.colW=s.colW||{};s.merges=s.merges||[];s.freeze=s.freeze||{r:0,c:0};s.charts=s.charts||[];if(s.filter===undefined)s.filter=null;
+  for(const c of Object.values(s.cells||{}))if(c.s&&c.s.f){if(FILLMAP[c.s.f])c.s.bg=FILLMAP[c.s.f];delete c.s.f}
+  return s;
+}
+function sample(){
+  const s=blankSheet('Bütçe');const put=(k,v,st)=>{s.cells[k]={v:String(v)};if(st)s.cells[k].s=st};
+  const H={b:1,bg:'#d3ecdd',bd:{b:2}};
+  ['Kalem','Ocak','Şubat','Mart','Toplam'].forEach((t,i)=>put(colName(i)+1,t,{...H,...(i?{al:'right'}:{})}));
+  const data=[['Kira',15000,15000,15000],['Market',6200,5800,6900],['Faturalar',2400,2650,2100],['Ulaşım',1800,1750,1900],['Eğlence',1500,2200,1300]];
+  data.forEach((row,i)=>{const r=i+2;put('A'+r,row[0]);for(let j=1;j<4;j++)put(colName(j)+r,row[j],{fmt:'cur'});put('E'+r,`=TOPLA(B${r}:D${r})`,{fmt:'cur',b:1})});
+  put('A7','Toplam',{b:1,bg:'#fff0a3',bd:{t:1}});['B','C','D','E'].forEach(c=>put(c+'7',`=TOPLA(${c}2:${c}6)`,{fmt:'cur',b:1,bg:'#fff0a3',bd:{t:1}}));
+  put('A9','Aylık ortalama gider');put('B9','=ORTALAMA(B7:D7)',{fmt:'cur'});
+  put('A10','Kira payı');put('B10','=E2/E7',{fmt:'pct'});
+  put('A11','Bütçe limiti');put('B11','80000',{fmt:'cur'});
+  put('A12','Durum');put('B12','=EĞER(E7>B11;"Limit aşıldı";"Limit içinde")',{b:1});
+  put('A14','Örnek veriler. Silip kendi tablonu oluşturabilirsin.',{i:1,fc:'#5b6a60'});
+  s.colW={0:190,1:120,2:120,3:120,4:130};s.freeze={r:1,c:0};
+  s.charts=[{id:'c1',type:'bar',ref:'A1:D6',title:'Aylık giderler',x:760,y:44,w:470,h:300}];
+  const p=blankSheet('Ödemeler');const q=(k,v,st)=>{p.cells[k]={v:String(v)};if(st)p.cells[k].s=st};
+  ['Tarih','Kalem','Tutar','Durum'].forEach((t,i)=>q(colName(i)+1,t,{...H,...(i===2?{al:'right'}:{})}));
+  [['05.10.2026','Kira',15000,'Ödendi'],['08.10.2026','Elektrik',1240,'Ödendi'],['12.10.2026','İnternet',450,'Ödendi'],['05.11.2026','Kira',15000,'Bekliyor'],['09.11.2026','Elektrik',1380,'Bekliyor'],['14.11.2026','Su',390,'Bekliyor']]
+    .forEach((row,i)=>{const r=i+2;q('A'+r,row[0],{fmt:'date'});q('B'+r,row[1]);q('C'+r,row[2],{fmt:'cur'});q('D'+r,row[3])});
+  q('F1','Ödenmemiş toplam',{b:1});q('G1','=ETOPLA(D2:D7;"Bekliyor";C2:C7)',{fmt:'cur',b:1});
+  q('F2','Son ödeme tarihi');q('G2','=MAK(A2:A7)',{fmt:'date'});
+  q('F3','Kira tutarı (DÜŞEYARA)');q('G3','=DÜŞEYARA("Kira";B2:C7;2;YANLIŞ)',{fmt:'cur'});
+  q('F4','Bugüne kalan gün');q('G4','=G2-BUGÜN()');
+  p.colW={0:120,1:130,2:120,3:110,4:40,5:200,6:140};p.filter={r:0,c1:0,c2:3,crit:{}};
+  return{sheets:[s,p,blankSheet('Sayfa3')],si:0};
+}
+function load(){for(const k of [KEY,OLDKEY]){try{const s=JSON.parse(localStorage.getItem(k));if(s&&Array.isArray(s.sheets)&&s.sheets.length)return s}catch(e){}}return null}
+let state=load()||sample();
+state.sheets.forEach(upgrade);
+if(!(state.si>=0&&state.si<state.sheets.length))state.si=0;
+const sh=()=>state.sheets[state.si];
+let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(state));
+  $('saved').textContent='Kaydedildi '+new Date().toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})}catch(e){toast('Kaydedilemedi: tarayıcı depolama alanı dolu olabilir. Yedek almayı unutma.')}},300)}
+
+/* ================= tarih yardımcıları ================= */
+const EPOCH=Date.UTC(1899,11,30);
+const serial=(y,m,d)=>Math.round((Date.UTC(y,m-1,d)-EPOCH)/864e5);
+const fromSerial=n=>new Date(EPOCH+Math.floor(n)*864e5);
+const AYLAR=['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+const GUNLER=['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+function litDate(s){
+  s=String(s).trim();let m=s.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4}|\d{2})$/),y,mo,d;
+  if(m){d=+m[1];mo=+m[2];y=+m[3];if(y<100)y+=2000}
+  else if((m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))){y=+m[1];mo=+m[2];d=+m[3]}
+  else return null;
+  if(mo<1||mo>12||d<1||d>31)return null;const dt=new Date(Date.UTC(y,mo-1,d));if(dt.getUTCDate()!==d)return null;
+  return serial(y,mo,d);
+}
+const two=n=>String(n).padStart(2,'0');
+function fmtDate(n,long){const d=fromSerial(n);return long?`${d.getUTCDate()} ${AYLAR[d.getUTCMonth()]} ${d.getUTCFullYear()}`:`${two(d.getUTCDate())}.${two(d.getUTCMonth()+1)}.${d.getUTCFullYear()}`}
+function todaySerial(){const t=new Date();return serial(t.getFullYear(),t.getMonth()+1,t.getDate())}
+
+/* ================= formül motoru ================= */
+class Err{constructor(c){this.c=c}}
+const isErr=v=>v instanceof Err;
+const chk=v=>{if(isErr(v))throw v;return v};
+const scal=v=>{if(v&&v.range){if(v.vals.length===1)return chk(v.vals[0]);throw new Err('#DEĞER!')}return chk(v)};
+function litNum(s){
+  s=String(s).trim().replace(/\s*(₺|TL)$/i,'').replace(/^₺\s*/,'');let pct=false;
+  if(s.endsWith('%')){pct=true;s=s.slice(0,-1).trim()}
+  const m=s.match(/^([-+]?)([\d.,]+)$/);if(!m)return null;const t=m[2];let n;
+  if(/^\d+$/.test(t))n=+t;
+  else if(/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(t))n=parseFloat(t.replace(/\./g,'').replace(',','.'));
+  else if(/^\d*[.,]\d+$/.test(t))n=parseFloat(t.replace(',','.'));
+  else return null;
+  if(m[1]==='-')n=-n;if(pct)n/=100;return n;
+}
+function fmtGen(v){if(!isFinite(v))return'#SAYI!';if(Number.isInteger(v)&&Math.abs(v)<1e15)return String(v);return String(parseFloat(v.toPrecision(12))).replace('.',',')}
+const norm=s=>s.toUpperCase().replace(/İ/g,'I');
+const toNum=v=>{v=scal(v);if(v==null||v==='')return 0;if(typeof v==='number')return v;if(typeof v==='boolean')return+v;let n=litNum(v);if(n==null)n=litDate(v);if(n==null)throw new Err('#DEĞER!');return n};
+const toStr=v=>{v=scal(v);if(v==null)return'';if(typeof v==='boolean')return v?'DOĞRU':'YANLIŞ';if(typeof v==='number')return fmtGen(v);return String(v)};
+const toBool=v=>{v=scal(v);if(typeof v==='boolean')return v;if(typeof v==='number')return v!==0;if(v==null||v==='')return false;const u=norm(String(v));if(u==='TRUE'||u==='DOĞRU')return true;if(u==='FALSE'||u==='YANLIŞ')return false;throw new Err('#DEĞER!')};
+function compare(x,y){
+  if(x==null)x=typeof y==='string'?'':0;if(y==null)y=typeof x==='string'?'':0;
+  const tx=typeof x,ty=typeof y;
+  if(tx==='number'&&ty==='number')return x-y;
+  if(tx==='string'&&ty==='string')return x.localeCompare(y,'tr',{sensitivity:'base',numeric:true});
+  if(tx==='boolean'&&ty==='boolean')return x-y;
+  const rk=v=>typeof v==='number'?0:typeof v==='string'?1:2;return rk(x)-rk(y);
+}
+/* [Türkçe ad, İngilizce ad, bağımsız değişkenler, açıklama, grup] */
+const FN=[
+['TOPLA','SUM','sayı1; [sayı2]; ...','Sayıları toplar','Matematik'],
+['ETOPLA','SUMIF','aralık; ölçüt; [toplam_aralığı]','Koşula uyan hücreleri toplar','Matematik'],
+['ÇOKETOPLA','SUMIFS','toplam_aralığı; ölçüt_aralığı1; ölçüt1; ...','Birden çok koşulla toplar','Matematik'],
+['ÇARPIM','PRODUCT','sayı1; [sayı2]; ...','Sayıları çarpar','Matematik'],
+['YUVARLA','ROUND','sayı; basamak','Belirtilen basamağa yuvarlar','Matematik'],
+['YUVARLAYUKARI','ROUNDUP','sayı; basamak','Yukarı yuvarlar','Matematik'],
+['YUVARLAAŞAĞI','ROUNDDOWN','sayı; basamak','Aşağı yuvarlar','Matematik'],
+['TAMSAYI','INT','sayı','Aşağıdaki tamsayıya indirir','Matematik'],
+['MUTLAK','ABS','sayı','Mutlak değer','Matematik'],
+['KAREKÖK','SQRT','sayı','Karekök','Matematik'],
+['KUVVET','POWER','sayı; üs','Üs alır','Matematik'],
+['MOD','MOD','sayı; bölen','Bölümden kalan','Matematik'],
+['PI','PI','','Pi sayısı','Matematik'],
+['S_SAYI_ÜRET','RAND','','0 ile 1 arasında rastgele sayı','Matematik'],
+['RASTGELEARADA','RANDBETWEEN','alt; üst','İki sayı arasında rastgele tamsayı','Matematik'],
+['ORTALAMA','AVERAGE','sayı1; [sayı2]; ...','Ortalama','İstatistik'],
+['EĞERORTALAMA','AVERAGEIF','aralık; ölçüt; [ortalama_aralığı]','Koşula uyanların ortalaması','İstatistik'],
+['ÇOKEĞERORTALAMA','AVERAGEIFS','ortalama_aralığı; ölçüt_aralığı1; ölçüt1; ...','Birden çok koşulla ortalama','İstatistik'],
+['MİN','MIN','sayı1; [sayı2]; ...','En küçük değer','İstatistik'],
+['MAK','MAX','sayı1; [sayı2]; ...','En büyük değer','İstatistik'],
+['ORTANCA','MEDIAN','sayı1; [sayı2]; ...','Ortanca değer','İstatistik'],
+['BÜYÜK','LARGE','aralık; k','k. en büyük değer','İstatistik'],
+['KÜÇÜK','SMALL','aralık; k','k. en küçük değer','İstatistik'],
+['STDSAPMA','STDEV','sayı1; [sayı2]; ...','Standart sapma (örnek)','İstatistik'],
+['BAĞ_DEĞ_SAY','COUNT','değer1; [değer2]; ...','Sayı içeren hücre sayısı','İstatistik'],
+['BAĞ_DEĞ_DOLU_SAY','COUNTA','değer1; [değer2]; ...','Dolu hücre sayısı','İstatistik'],
+['BOŞLUKSAY','COUNTBLANK','aralık','Boş hücre sayısı','İstatistik'],
+['EĞERSAY','COUNTIF','aralık; ölçüt','Koşula uyan hücre sayısı','İstatistik'],
+['ÇOKEĞERSAY','COUNTIFS','ölçüt_aralığı1; ölçüt1; ...','Birden çok koşula uyan hücre sayısı','İstatistik'],
+['EĞER','IF','koşul; doğruysa; [yanlışsa]','Koşula göre değer döndürür','Mantıksal'],
+['ÇOKEĞER','IFS','koşul1; değer1; [koşul2; değer2]; ...','İlk doğru koşulun değerini döndürür','Mantıksal'],
+['EĞERHATA','IFERROR','değer; hata_olursa','Hata çıkarsa yerine başka değer yazar','Mantıksal'],
+['VE','AND','mantıksal1; [mantıksal2]; ...','Hepsi doğruysa DOĞRU','Mantıksal'],
+['YADA','OR','mantıksal1; [mantıksal2]; ...','Biri doğruysa DOĞRU','Mantıksal'],
+['DEĞİL','NOT','mantıksal','Tersini alır','Mantıksal'],
+['EBOŞSA','ISBLANK','değer','Hücre boşsa DOĞRU','Mantıksal'],
+['ESAYIYSA','ISNUMBER','değer','Sayıysa DOĞRU','Mantıksal'],
+['EMETİNSE','ISTEXT','değer','Metinse DOĞRU','Mantıksal'],
+['EHATALIYSA','ISERROR','değer','Hataysa DOĞRU','Mantıksal'],
+['DÜŞEYARA','VLOOKUP','aranan; tablo; sütun_no; [yaklaşık]','Tablonun ilk sütununda arar, aynı satırdan değer getirir. Tam eşleşme için son değişkene YANLIŞ yaz.','Arama'],
+['YATAYARA','HLOOKUP','aranan; tablo; satır_no; [yaklaşık]','Tablonun ilk satırında arar','Arama'],
+['ÇAPRAZARA','XLOOKUP','aranan; arama_aralığı; döndürülecek_aralık; [bulunamazsa]','Bir aralıkta arar, diğer aralıktan karşılığını getirir','Arama'],
+['KAÇINCI','MATCH','aranan; aralık; [eşleşme_türü]','Değerin aralıktaki sırasını bulur','Arama'],
+['İNDİS','INDEX','aralık; satır; [sütun]','Aralıktaki belirli konumun değeri','Arama'],
+['BİRLEŞTİR','CONCAT','metin1; [metin2]; ...','Metinleri birleştirir','Metin'],
+['UZUNLUK','LEN','metin','Karakter sayısı','Metin'],
+['SOLDAN','LEFT','metin; [sayı]','Baştan karakter alır','Metin'],
+['SAĞDAN','RIGHT','metin; [sayı]','Sondan karakter alır','Metin'],
+['PARÇAAL','MID','metin; başlangıç; sayı','Ortadan karakter alır','Metin'],
+['KIRP','TRIM','metin','Fazla boşlukları siler','Metin'],
+['BÜYÜKHARF','UPPER','metin','Büyük harfe çevirir','Metin'],
+['KÜÇÜKHARF','LOWER','metin','Küçük harfe çevirir','Metin'],
+['YAZIM.DÜZENİ','PROPER','metin','Her kelimenin ilk harfini büyütür','Metin'],
+['YERİNEKOY','SUBSTITUTE','metin; eski; yeni','Metindeki bir parçayı değiştirir','Metin'],
+['BUL','FIND','aranan; metin; [başlangıç]','Metnin konumunu bulur (büyük/küçük harf duyarlı)','Metin'],
+['MBUL','SEARCH','aranan; metin; [başlangıç]','Metnin konumunu bulur','Metin'],
+['YİNELE','REPT','metin; sayı','Metni tekrarlar','Metin'],
+['SAYIYAÇEVİR','VALUE','metin','Metni sayıya çevirir','Metin'],
+['METNEÇEVİR','TEXT','değer; biçim','Sayıyı biçimli metne çevirir: "#.##0,00" veya "gg.aa.yyyy"','Metin'],
+['BUGÜN','TODAY','','Bugünün tarihi','Tarih'],
+['ŞİMDİ','NOW','','Şu anki tarih ve saat','Tarih'],
+['TARİH','DATE','yıl; ay; gün','Tarih oluşturur','Tarih'],
+['YIL','YEAR','tarih','Yılı verir','Tarih'],
+['AY','MONTH','tarih','Ayı verir','Tarih'],
+['GÜN','DAY','tarih','Günü verir','Tarih'],
+['HAFTANINGÜNÜ','WEEKDAY','tarih; [tür]','Haftanın günü (1 = Pazar)','Tarih'],
+['SERİTARİH','EDATE','başlangıç; ay_sayısı','Ay ekler veya çıkarır','Tarih'],
+['SERİAY','EOMONTH','başlangıç; ay_sayısı','Ayın son günü','Tarih'],
+['GÜNSAY','DAYS','bitiş; başlangıç','İki tarih arasındaki gün','Tarih'],
+['ETARİHLİ','DATEDIF','başlangıç; bitiş; birim','Tarih farkı: "Y" yıl, "M" ay, "D" gün','Tarih'],
+['TAMİŞGÜNÜ','NETWORKDAYS','başlangıç; bitiş','Hafta içi gün sayısı','Tarih'],
+];
+const AL={},REV={};FN.forEach(f=>{AL[norm(f[0])]=f[1];if(!REV[f[1]])REV[f[1]]=f[0]});AL.CONCATENATE='CONCAT';
+const DATEFN=new Set(['TODAY','DATE','EDATE','EOMONTH']);
+
+function tokenize(src){
+  const T=[];let i=0;const semi=src.includes(';')||!src.includes('(');
+  const numRe=semi?/^\d+(?:[.,]\d+)?(?:[eE][-+]?\d+)?/:/^\d+(?:\.\d+)?(?:[eE][-+]?\d+)?/;
+  while(i<src.length){
+    const ch=src[i],rest=src.slice(i);let m;
+    if(/\s/.test(ch)){i++;continue}
+    if(ch==='"'){let j=i+1,s='';for(;;){if(j>=src.length)throw new Err('#HATA!');if(src[j]==='"'){if(src[j+1]==='"'){s+='"';j+=2;continue}break}s+=src[j++]}T.push({k:'str',v:s});i=j+1;continue}
+    if((m=rest.match(/^\$?([A-Za-z]{1,3})\$?(\d+)(?![A-Za-z0-9_(.ÇĞİÖŞÜçğıöşü])/))){T.push({k:'ref',c:colIndex(m[1]),r:+m[2]-1});i+=m[0].length;continue}
+    if((m=rest.match(numRe))){T.push({k:'num',v:parseFloat(m[0].replace(',','.'))});i+=m[0].length;continue}
+    if((m=rest.match(/^[A-Za-zÇĞİÖŞÜçğıöşü_][A-Za-z0-9ÇĞİÖŞÜçğıöşü_.]*/))){T.push({k:'name',v:norm(m[0])});i+=m[0].length;continue}
+    if((m=rest.match(/^(<=|>=|<>)/))){T.push({k:'op',v:m[0]});i+=2;continue}
+    if('+-*/^&=<>%:'.includes(ch)){T.push({k:'op',v:ch});i++;continue}
+    if(ch==='('){T.push({k:'lp'});i++;continue}
+    if(ch===')'){T.push({k:'rp'});i++;continue}
+    if(ch===','||ch===';'){T.push({k:'sep'});i++;continue}
+    throw new Err('#HATA!');
+  }
+  return T;
+}
+function parse(src){
+  const T=tokenize(src);let p=0;
+  const isOp=(...o)=>T[p]&&T[p].k==='op'&&o.includes(T[p].v);
+  const is=k=>T[p]&&T[p].k===k;
+  function cmp(){let a=cat();while(isOp('=','<>','<','>','<=','>=')){const o=T[p++].v;a={t:'bin',o,a,b:cat()}}return a}
+  function cat(){let a=add();while(isOp('&')){p++;a={t:'bin',o:'&',a,b:add()}}return a}
+  function add(){let a=mul();while(isOp('+','-')){const o=T[p++].v;a={t:'bin',o,a,b:mul()}}return a}
+  function mul(){let a=pw();while(isOp('*','/')){const o=T[p++].v;a={t:'bin',o,a,b:pw()}}return a}
+  function pw(){let a=un();while(isOp('^')){p++;a={t:'bin',o:'^',a,b:un()}}return a}
+  function un(){if(isOp('-')){p++;return{t:'neg',a:un()}}if(isOp('+')){p++;return un()}let a=prim();while(isOp('%')){p++;a={t:'pct',a}}return a}
+  function prim(){
+    const k=T[p++];if(!k)throw new Err('#HATA!');
+    if(k.k==='num'||k.k==='str')return{t:'v',v:k.v};
+    if(k.k==='ref'){if(isOp(':')){p++;const k2=T[p++];if(!k2||k2.k!=='ref')throw new Err('#HATA!');
+      return{t:'rng',r1:Math.min(k.r,k2.r),c1:Math.min(k.c,k2.c),r2:Math.max(k.r,k2.r),c2:Math.max(k.c,k2.c)}}return{t:'ref',r:k.r,c:k.c}}
+    if(k.k==='name'){
+      if(is('lp')){p++;const args=[];if(!is('rp')){args.push(is('sep')?{t:'v',v:null}:cmp());while(is('sep')){p++;args.push(is('sep')||is('rp')?{t:'v',v:null}:cmp())}}if(!is('rp'))throw new Err('#HATA!');p++;return{t:'fn',n:AL[k.v]||k.v,args}}
+      if(k.v==='TRUE'||k.v==='DOĞRU')return{t:'v',v:true};if(k.v==='FALSE'||k.v==='YANLIŞ')return{t:'v',v:false};
+      throw new Err('#AD?');
+    }
+    if(k.k==='lp'){const e=cmp();if(!is('rp'))throw new Err('#HATA!');p++;return e}
+    throw new Err('#HATA!');
+  }
+  const e=cmp();if(p<T.length)throw new Err('#HATA!');return e;
+}
+const astCache=new Map();
+function getAst(src){if(astCache.has(src)){const a=astCache.get(src);if(isErr(a))throw a;return a}
+  try{const a=parse(src);astCache.set(src,a);return a}catch(e){const er=isErr(e)?e:new Err('#HATA!');astCache.set(src,er);throw er}}
+
+let cache=new Map();const visiting=new Set();let evalSheet=null;
+const S=()=>evalSheet||sh();
+function lit(raw){const n=litNum(raw);if(n!=null)return n;const d=litDate(raw);if(d!=null)return d;const u=norm(raw.trim());if(u==='DOĞRU'||u==='TRUE')return true;if(u==='YANLIŞ'||u==='FALSE')return false;return raw}
+function valueOf(r,c){
+  if(r<0||c<0)return new Err('#BAŞV!');
+  const k=key(r,c);if(cache.has(k))return cache.get(k);
+  const cell=S().cells[k];let v=null;
+  if(cell&&cell.v!==''&&cell.v!=null){
+    const raw=String(cell.v);
+    if(cell.s&&cell.s.fmt==='text')v=raw;
+    else if(raw[0]==='='&&raw.length>1){
+      if(visiting.has(k))return new Err('#DÖNGÜ!');
+      visiting.add(k);
+      try{v=scal(ev(getAst(raw.slice(1))));if(v==null)v=0;if(typeof v==='number'&&!isFinite(v))v=new Err('#SAYI!')}
+      catch(e){v=isErr(e)?e:new Err('#HATA!')}
+      visiting.delete(k);
+    }else v=lit(raw);
+  }
+  cache.set(k,v);return v;
+}
+function ev(n){
+  switch(n.t){
+    case'v':return n.v;
+    case'ref':return valueOf(n.r,n.c);
+    case'rng':{const vals=[];const r2=Math.min(n.r2,S().rows+50);for(let r=n.r1;r<=r2;r++)for(let c=n.c1;c<=n.c2;c++)vals.push(valueOf(r,c));return{range:true,vals,h:r2-n.r1+1,w:n.c2-n.c1+1}}
+    case'neg':return-toNum(ev(n.a));
+    case'pct':return toNum(ev(n.a))/100;
+    case'bin':{
+      const a=ev(n.a),b=ev(n.b),o=n.o;
+      if(o==='&')return toStr(a)+toStr(b);
+      if(o==='='||o==='<>'||o==='<'||o==='>'||o==='<='||o==='>='){const c=compare(scal(a),scal(b));
+        return o==='='?c===0:o==='<>'?c!==0:o==='<'?c<0:o==='>'?c>0:o==='<='?c<=0:c>=0}
+      const x=toNum(a),y=toNum(b);
+      if(o==='+')return x+y;if(o==='-')return x-y;if(o==='*')return x*y;
+      if(o==='/'){if(y===0)throw new Err('#SAYI/0!');return x/y}
+      return Math.pow(x,y);
+    }
+    case'fn':return callFn(n);
+  }
+}
+function flat(vals){const o=[];for(const a of vals){if(a&&a.range)o.push(...a.vals.map(v=>({v,fromRange:true})));else o.push({v:a,fromRange:false})}return o}
+function nums(vals){const o=[];for(const {v,fromRange} of flat(vals)){chk(v);if(typeof v==='number')o.push(v);else if(!fromRange){if(typeof v==='boolean')o.push(+v);else if(typeof v==='string'){const n=litNum(v);if(n!=null)o.push(n)}}}return o}
+function makeCrit(c){
+  c=scal(c);
+  if(typeof c==='string'){
+    const m=c.match(/^(<=|>=|<>|<|>|=)?([\s\S]*)$/);const op=m[1]||'=';let n=litNum(m[2]);if(n==null)n=litDate(m[2]);const val=n!=null?n:m[2];
+    const test=d=>op==='='?d===0:op==='<>'?d!==0:op==='<'?d<0:op==='>'?d>0:op==='<='?d<=0:d>=0;
+    if(typeof val==='string'&&/[*?]/.test(val)&&(op==='='||op==='<>')){
+      const re=new RegExp('^'+val.replace(/[.+^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*').replace(/\?/g,'.')+'$','i');
+      return v=>{if(isErr(v))return false;const ok=re.test(String(v??''));return op==='='?ok:!ok};
+    }
+    return v=>{if(isErr(v))return false;if(typeof val==='number'){if(typeof v!=='number')return op==='<>';return test(v-val)}
+      if(val===''&&op==='=')return v==null||v==='';
+      return test(String(v??'').localeCompare(val,'tr',{sensitivity:'base'}))};
+  }
+  return v=>!isErr(v)&&compare(v,c)===0&&typeof v===typeof c;
+}
+const rng=v=>{if(!v||!v.range)throw new Err('#DEĞER!');return v};
+const at=(R,r,c)=>{if(r<0||c<0||r>=R.h||c>=R.w)throw new Err('#BAŞV!');return R.vals[r*R.w+c]};
+function lookupEq(a,b){if(typeof a==='string'&&typeof b==='string')return a.localeCompare(b,'tr',{sensitivity:'base'})===0;return compare(a,b)===0&&typeof a===typeof b}
+function multiCrit(A,E,start){const n=A.length-start;if(n<2||n%2)throw new Err('#DEĞER!');const pairs=[];for(let i=start;i<A.length;i+=2)pairs.push([rng(E(i)),makeCrit(E(i+1))]);
+  const len=pairs[0][0].vals.length;return idx=>pairs.every(([R,f])=>f(R.vals[idx]))&&idx<len}
+function fmtText(v,f){
+  if(typeof v!=='number'){const n=litNum(v);if(n==null)return toStr(v);v=n}
+  if(/[ygdaY]/i.test(f.replace(/"[^"]*"/g,''))&&!/[#0]/.test(f)){
+    const d=fromSerial(v);const Y=d.getUTCFullYear(),M=d.getUTCMonth(),D=d.getUTCDate(),W=d.getUTCDay();
+    return f.replace(/yyyy|yy|aaaa|mmmm|aaa|mmm|aa|mm|gggg|dddd|ggg|ddd|gg|dd|a|m|g|d/gi,t=>{const u=t.toLowerCase();
+      return u==='yyyy'?Y:u==='yy'?String(Y).slice(2):(u==='aaaa'||u==='mmmm')?AYLAR[M]:(u==='aaa'||u==='mmm')?AYLAR[M].slice(0,3):(u==='aa'||u==='mm')?two(M+1):(u==='a'||u==='m')?M+1:
+        (u==='gggg'||u==='dddd')?GUNLER[W]:(u==='ggg'||u==='ddd')?GUNLER[W].slice(0,3):(u==='gg'||u==='dd')?two(D):D});
+  }
+  const pct=f.includes('%');if(pct)v*=100;
+  const mm=f.match(/[.,](0+)(?![^]*[.,]0)/);const dec=mm?mm[1].length:0;const grp=/#[.,]#|0[.,]000|#[.,]0/.test(f)&&(!mm||f.indexOf(mm[0])>f.search(/[.,]/));
+  return new Intl.NumberFormat('tr-TR',{minimumFractionDigits:dec,maximumFractionDigits:dec,useGrouping:grp}).format(v)+(pct?'%':'');
+}
+function callFn(n){
+  const A=n.args,E=i=>ev(A[i]);
+  const need=(a,b)=>{if(A.length<a||(b!=null&&A.length>b))throw new Err('#DEĞER!')};
+  const all=()=>A.map(ev);
+  const N=i=>toNum(E(i)),T=i=>toStr(E(i));
+  switch(n.n){
+    case'IF':need(2,3);return toBool(E(0))?scal(E(1)):(A.length>2?scal(E(2)):false);
+    case'IFS':for(let i=0;i+1<A.length;i+=2)if(toBool(E(i)))return scal(E(i+1));throw new Err('#YOK');
+    case'IFERROR':{need(2,2);try{const v=scal(E(0));return v}catch(e){if(isErr(e))return scal(E(1));throw e}}
+    case'ISERROR':{need(1,1);try{scal(E(0));return false}catch(e){if(isErr(e))return true;throw e}}
+    case'ISBLANK':{need(1,1);const v=E(0);return v==null||v===''}
+    case'ISNUMBER':{need(1,1);try{return typeof scal(E(0))==='number'}catch(e){return false}}
+    case'ISTEXT':{need(1,1);try{const v=scal(E(0));return typeof v==='string'&&v!==''}catch(e){return false}}
+    case'SUM':return nums(all()).reduce((s,x)=>s+x,0);
+    case'AVERAGE':{const v=nums(all());if(!v.length)throw new Err('#SAYI/0!');return v.reduce((s,x)=>s+x,0)/v.length}
+    case'MEDIAN':{const v=nums(all()).sort((a,b)=>a-b);if(!v.length)throw new Err('#SAYI!');const h=v.length>>1;return v.length%2?v[h]:(v[h-1]+v[h])/2}
+    case'STDEV':{const v=nums(all());if(v.length<2)throw new Err('#SAYI/0!');const m=v.reduce((s,x)=>s+x,0)/v.length;return Math.sqrt(v.reduce((s,x)=>s+(x-m)**2,0)/(v.length-1))}
+    case'LARGE':case'SMALL':{need(2,2);const v=nums([E(0)]).sort((a,b)=>n.n==='LARGE'?b-a:a-b);const k=Math.trunc(N(1));if(k<1||k>v.length)throw new Err('#SAYI!');return v[k-1]}
+    case'MIN':{const v=nums(all());return v.length?Math.min(...v):0}
+    case'MAX':{const v=nums(all());return v.length?Math.max(...v):0}
+    case'PRODUCT':{const v=nums(all());return v.length?v.reduce((s,x)=>s*x,1):0}
+    case'COUNT':return flat(all()).filter(x=>typeof x.v==='number').length;
+    case'COUNTA':return flat(all()).filter(x=>x.v!=null&&x.v!=='').length;
+    case'COUNTBLANK':return rng(E(0)).vals.filter(v=>v==null||v==='').length;
+    case'AND':need(1);return flat(all()).filter(x=>x.v!=null&&x.v!=='').every(x=>toBool(x.v));
+    case'OR':need(1);return flat(all()).filter(x=>x.v!=null&&x.v!=='').some(x=>toBool(x.v));
+    case'NOT':need(1,1);return!toBool(E(0));
+    case'ROUND':case'ROUNDUP':case'ROUNDDOWN':{need(1,2);const x=N(0),d=A.length>1?Math.trunc(N(1)):0;const f=Math.pow(10,d);const a=Math.abs(x)*f;
+      const r=n.n==='ROUND'?Math.round(a+1e-9):n.n==='ROUNDUP'?Math.ceil(a-1e-9):Math.floor(a+1e-9);return Math.sign(x)*r/f}
+    case'ABS':need(1,1);return Math.abs(N(0));
+    case'SQRT':{need(1,1);const x=N(0);if(x<0)throw new Err('#SAYI!');return Math.sqrt(x)}
+    case'POWER':need(2,2);return Math.pow(N(0),N(1));
+    case'MOD':{need(2,2);const x=N(0),y=N(1);if(y===0)throw new Err('#SAYI/0!');return x-y*Math.floor(x/y)}
+    case'INT':need(1,1);return Math.floor(N(0));
+    case'PI':return Math.PI;
+    case'RAND':return Math.random();
+    case'RANDBETWEEN':{need(2,2);const a=Math.ceil(N(0)),b=Math.floor(N(1));return a+Math.floor(Math.random()*(b-a+1))}
+    case'SUMIF':case'COUNTIF':case'AVERAGEIF':{
+      need(2,n.n==='COUNTIF'?2:3);const R=rng(E(0));const f=makeCrit(E(1));
+      if(n.n==='COUNTIF')return R.vals.filter(f).length;
+      const sv=A.length>2?rng(E(2)).vals:R.vals;let s=0,c=0;
+      R.vals.forEach((v,i)=>{if(f(v)){const x=sv[i];chk(x);if(typeof x==='number'){s+=x;c++}}});
+      if(n.n==='AVERAGEIF'){if(!c)throw new Err('#SAYI/0!');return s/c}return s;
+    }
+    case'SUMIFS':case'AVERAGEIFS':{const T0=rng(E(0));const ok=multiCrit(A,E,1);let s=0,c=0;T0.vals.forEach((x,i)=>{if(ok(i)){chk(x);if(typeof x==='number'){s+=x;c++}}});
+      if(n.n==='AVERAGEIFS'){if(!c)throw new Err('#SAYI/0!');return s/c}return s}
+    case'COUNTIFS':{const ok=multiCrit(A,E,0);const len=rng(E(0)).vals.length;let c=0;for(let i=0;i<len;i++)if(ok(i))c++;return c}
+    case'VLOOKUP':case'HLOOKUP':{
+      need(3,4);const x=scal(E(0)),R=rng(E(1)),idx=Math.trunc(N(2))-1;const approx=A.length>3&&A[3].t!=='v'||A.length>3&&A[3].v!=null?toBool(E(3)):true;
+      const V=n.n==='VLOOKUP';const len=V?R.h:R.w;const get=(i,j)=>V?at(R,i,j):at(R,j,i);
+      if(idx<0||idx>=(V?R.w:R.h))throw new Err('#BAŞV!');
+      let hit=-1;
+      if(!approx){for(let i=0;i<len;i++){if(lookupEq(get(i,0),x)){hit=i;break}}}
+      else{for(let i=0;i<len;i++){const v=get(i,0);if(v==null||v==='')continue;if(compare(v,x)<=0)hit=i;else break}}
+      if(hit<0)throw new Err('#YOK');return scal(get(hit,idx));
+    }
+    case'XLOOKUP':{need(3,4);const x=scal(E(0)),L=rng(E(1)),Rr=rng(E(2));const i=L.vals.findIndex(v=>lookupEq(v,x));
+      if(i<0){if(A.length>3)return scal(E(3));throw new Err('#YOK')}
+      if(L.w===1&&Rr.w>=1&&Rr.h===L.h)return scal(at(Rr,i,0));if(L.h===1&&Rr.w===L.w)return scal(at(Rr,0,i));return scal(Rr.vals[i])}
+    case'MATCH':{need(2,3);const x=scal(E(0)),R=rng(E(1)),t=A.length>2?Math.trunc(N(2)):1;const v=R.vals;
+      if(t===0){const i=v.findIndex(y=>lookupEq(y,x));if(i<0)throw new Err('#YOK');return i+1}
+      let hit=-1;for(let i=0;i<v.length;i++){if(v[i]==null||v[i]==='')continue;const c=compare(v[i],x);if(t>0?c<=0:c>=0)hit=i;else break}
+      if(hit<0)throw new Err('#YOK');return hit+1}
+    case'INDEX':{need(2,3);const R=rng(E(0));let r=Math.trunc(N(1)),c=A.length>2?Math.trunc(N(2)):1;
+      if(A.length===2&&R.h===1){c=r;r=1}if(r<1||c<1)throw new Err('#BAŞV!');return scal(at(R,r-1,c-1))}
+    case'LEN':need(1,1);return T(0).length;
+    case'LEFT':{need(1,2);const k=A.length>1?Math.trunc(N(1)):1;return T(0).slice(0,Math.max(0,k))}
+    case'RIGHT':{need(1,2);const k=A.length>1?Math.trunc(N(1)):1;const s=T(0);return k<=0?'':s.slice(-k)}
+    case'MID':{need(3,3);const s=T(0),st=Math.trunc(N(1)),k=Math.trunc(N(2));if(st<1)throw new Err('#DEĞER!');return s.substr(st-1,Math.max(0,k))}
+    case'TRIM':need(1,1);return T(0).trim().replace(/\s+/g,' ');
+    case'UPPER':need(1,1);return T(0).toLocaleUpperCase('tr');
+    case'LOWER':need(1,1);return T(0).toLocaleLowerCase('tr');
+    case'PROPER':need(1,1);return T(0).toLocaleLowerCase('tr').replace(/(^|[^\p{L}])(\p{L})/gu,(m,a,b)=>a+b.toLocaleUpperCase('tr'));
+    case'SUBSTITUTE':need(3,3);return T(0).split(T(1)).join(T(2));
+    case'FIND':case'SEARCH':{need(2,3);let f=T(0),s=T(1);const st=A.length>2?Math.trunc(N(2)):1;if(n.n==='SEARCH'){f=f.toLocaleLowerCase('tr');s=s.toLocaleLowerCase('tr')}
+      const i=s.indexOf(f,st-1);if(i<0)throw new Err('#DEĞER!');return i+1}
+    case'REPT':need(2,2);return T(0).repeat(Math.max(0,Math.trunc(N(1))));
+    case'VALUE':need(1,1);return N(0);
+    case'TEXT':need(2,2);return fmtText(scal(E(0)),T(1));
+    case'CONCAT':return flat(all()).map(x=>toStr(x.v)).join('');
+    case'TODAY':return todaySerial();
+    case'NOW':{const t=new Date();return todaySerial()+(t.getHours()*3600+t.getMinutes()*60+t.getSeconds())/86400}
+    case'DATE':{need(3,3);let y=Math.trunc(N(0));if(y<100)y+=1900;return Math.round((Date.UTC(y,Math.trunc(N(1))-1,Math.trunc(N(2)))-EPOCH)/864e5)}
+    case'YEAR':need(1,1);return fromSerial(N(0)).getUTCFullYear();
+    case'MONTH':need(1,1);return fromSerial(N(0)).getUTCMonth()+1;
+    case'DAY':need(1,1);return fromSerial(N(0)).getUTCDate();
+    case'WEEKDAY':{need(1,2);const d=fromSerial(N(0)).getUTCDay(),t=A.length>1?Math.trunc(N(1)):1;return t===2?(d+6)%7+1:t===3?(d+6)%7:d+1}
+    case'EDATE':case'EOMONTH':{need(2,2);const d=fromSerial(N(0)),m=Math.trunc(N(1));const y=d.getUTCFullYear(),mo=d.getUTCMonth()+m;
+      if(n.n==='EOMONTH')return Math.round((Date.UTC(y,mo+1,0)-EPOCH)/864e5);
+      const last=new Date(Date.UTC(y,mo+1,0)).getUTCDate();return Math.round((Date.UTC(y,mo,Math.min(d.getUTCDate(),last))-EPOCH)/864e5)}
+    case'DAYS':need(2,2);return Math.floor(N(0))-Math.floor(N(1));
+    case'DATEDIF':{need(3,3);const a=fromSerial(N(0)),b=fromSerial(N(1)),u=T(2).toUpperCase();if(b<a)throw new Err('#SAYI!');
+      if(u==='D'||u==='G')return Math.round((b-a)/864e5);
+      let mo=(b.getUTCFullYear()-a.getUTCFullYear())*12+b.getUTCMonth()-a.getUTCMonth();if(b.getUTCDate()<a.getUTCDate())mo--;
+      if(u==='M'||u==='A')return mo;if(u==='Y')return Math.floor(mo/12);throw new Err('#SAYI!')}
+    case'NETWORKDAYS':{need(2,2);let a=Math.floor(N(0)),b=Math.floor(N(1)),sg=1;if(b<a){[a,b]=[b,a];sg=-1}let c=0;for(let x=a;x<=b;x++){const w=fromSerial(x).getUTCDay();if(w&&w!==6)c++}return c*sg}
+    default:throw new Err('#AD?');
+  }
+}
+
+/* ================= görüntüleme ================= */
+const nfCache={};
+const nfmt=(min,max,grp,style)=>{const k=min+'|'+max+'|'+grp+'|'+style;return nfCache[k]||(nfCache[k]=new Intl.NumberFormat('tr-TR',{minimumFractionDigits:min,maximumFractionDigits:max,useGrouping:grp,style:style||'decimal'}))};
+function topFn(raw){if(!isFormula(raw))return null;try{const a=getAst(raw.slice(1));return a.t==='fn'?a.n:null}catch(e){return null}}
+function autoFmt(cell){const raw=String(cell.v);if(!isFormula(raw))return litDate(raw)!=null?'date':'';const f=topFn(raw);return DATEFN.has(f)?'date':f==='NOW'?'dt':''}
+function effFmt(cell){return cell.s&&cell.s.fmt||autoFmt(cell)}
+function decOf(v){const s=fmtGen(v);const i=s.indexOf(',');return i<0?0:Math.min(s.length-i-1,10)}
+function display(v,cell){
+  if(v==null)return'';if(isErr(v))return v.c;
+  if(typeof v==='boolean')return v?'DOĞRU':'YANLIŞ';
+  if(typeof v==='number'){if(!isFinite(v))return'#SAYI!';
+    const st=cell.s||{},fmt=effFmt(cell),d=st.dec;
+    if(fmt==='date')return fmtDate(v);if(fmt==='datel')return fmtDate(v,true);
+    if(fmt==='dt'){const fr=v-Math.floor(v),sec=Math.round(fr*86400);return fmtDate(v)+' '+two(Math.floor(sec/3600))+':'+two(Math.floor(sec/60)%60)}
+    if(fmt==='num')return nfmt(d??2,d??2,true).format(v);
+    if(fmt==='int')return nfmt(d??0,d??0,true).format(v);
+    if(fmt==='cur')return nfmt(d??2,d??2,true).format(v)+' ₺';
+    if(fmt==='pct')return d!=null?nfmt(d,d,false,'percent').format(v):nfmt(0,2,false,'percent').format(v);
+    if(d!=null)return nfmt(d,d,false).format(v);
+    return fmtGen(v);
+  }
+  return String(v);
+}
+
+/* ================= referans yeniden yazma ================= */
+const REF_RE=/"(?:[^"]|"")*"|(\$?)([A-Za-z]{1,3})(\$?)(\d+)(?::(\$?)([A-Za-z]{1,3})(\$?)(\d+))?(?![A-Za-z0-9_(.ÇĞİÖŞÜçğıöşü])/g;
+function rewrite(f,fn){
+  return f.replace(REF_RE,(m,d1,L1,d2,N1,d3,L2,d4,N2,off,str)=>{
+    if(m[0]==='"')return m;
+    if(off>0&&/[A-Za-z0-9_.ÇĞİÖŞÜçğıöşü$]/.test(str[off-1]))return m;
+    const one=(dc,L,dr,Nn,role)=>{const res=fn(+Nn-1,colIndex(L),!!dr,!!dc,role);if(!res)return null;return{r:res[0],c:res[1],s:(dc?'$':'')+colName(res[1])+(dr?'$':'')+(res[0]+1)}};
+    if(!L2){const a=one(d1,L1,d2,N1,'single');return a?a.s:'#BAŞV!'}
+    const a=one(d1,L1,d2,N1,'start'),b=one(d3,L2,d4,N2,'end');
+    if(!a||!b||b.r<a.r||b.c<a.c)return'#BAŞV!';return a.s+':'+b.s;
+  });
+}
+const isFormula=v=>typeof v==='string'&&v[0]==='='&&v.length>1;
+const shiftFormula=(f,dr,dc)=>rewrite(f,(r,c,ar,ac)=>{const nr=ar?r:r+dr,nc=ac?c:c+dc;return nr<0||nc<0?null:[nr,nc]});
+function mapNames(f,fn){let out='',i=0;while(i<f.length){if(f[i]==='"'){const j=f.indexOf('"',i+1);const e=j<0?f.length:j+1;out+=f.slice(i,e);i=e;while(f[i]==='"'&&f[i-1]==='"'){const k=f.indexOf('"',i+1);const e2=k<0?f.length:k+1;out+=f.slice(i,e2);i=e2}continue}
+  const m=f.slice(i).match(/^[A-Za-zÇĞİÖŞÜçğıöşü_][A-Za-z0-9ÇĞİÖŞÜçğıöşü_.]*(?=\s*\()/);if(m&&!(i>0&&/[A-Za-z0-9_$]/.test(f[i-1]))){out+=fn(m[0]);i+=m[0].length;continue}out+=f[i++]}return out}
+function toEnglish(f){let x=f;if(x.includes(';'))x=x.replace(/"(?:[^"]|"")*"|(\d),(\d)/g,(m,a,b)=>m[0]==='"'?m:a+'.'+b).replace(/"(?:[^"]|"")*"|;/g,m=>m===';'?',':m);
+  x=mapNames(x,nm=>AL[norm(nm)]||nm);return x.replace(/"(?:[^"]|"")*"|(?<![A-Za-z0-9_ÇĞİÖŞÜçğıöşü])(DOĞRU|YANLIŞ)(?![A-Za-z0-9_ÇĞİÖŞÜçğıöşü(])/g,(m,w)=>w?(w==='DOĞRU'?'TRUE':'FALSE'):m)}
+function toTurkish(f){return mapNames(f.replace(/"(?:[^"]|"")*"|,/g,m=>m===','?';':m).replace(/"(?:[^"]|"")*"|(\d)\.(\d)/g,(m,a,b)=>m[0]==='"'?m:a+','+b),nm=>REV[nm.toUpperCase()]||nm)}
+
+/* ================= DOM ================= */
+const table=$('grid'),wrap=$('wrap'),sheetEl=$('sheet'),editor=$('editor'),fx=$('fx'),nameBox=$('namebox'),statusEl=$('status'),tabsEl=$('tabs'),chartsEl=$('charts');
+let tds=[],chs=[],rhs=[],trs=[],colEls=[];
+let sel={r:0,c:0,er:0,ec:0};
+const range=()=>({r1:Math.min(sel.r,sel.er),r2:Math.max(sel.r,sel.er),c1:Math.min(sel.c,sel.ec),c2:Math.max(sel.c,sel.ec)});
+const raw=(r,c)=>{const x=sh().cells[key(r,c)];return x&&x.v!=null?String(x.v):''};
+const FONTS={tnr:'"Times New Roman",Tinos,"Liberation Serif",Times,serif',calibri:'Calibri,Carlito,"Segoe UI",sans-serif',arial:'Arial,Helvetica,sans-serif',georgia:'Georgia,serif',courier:'"Courier New",Courier,monospace'};
+function readable(hex){const m=/^#?([0-9a-f]{6})$/i.exec(hex||'');if(!m)return'';const n=parseInt(m[1],16);const l=(0.299*(n>>16)+0.587*((n>>8)&255)+0.114*(n&255))/255;return l>0.55?'#1b211d':'#ffffff'}
+function bdShadow(b){const p=[];if(b.t)p.push(`inset 0 ${b.t}px 0 0 var(--ink)`);if(b.b)p.push(`inset 0 -${b.b}px 0 0 var(--ink)`);if(b.l)p.push(`inset ${b.l}px 0 0 0 var(--ink)`);if(b.r)p.push(`inset -${b.r}px 0 0 0 var(--ink)`);return p.join(',')}
+let zoom=1,hiddenRows=new Set(),dataEnd=-1;
+
+function buildGrid(){
+  const s=sh();
+  let h='<colgroup><col style="width:52px">';
+  for(let c=0;c<s.cols;c++)h+=`<col style="width:${s.colW[c]||110}px">`;
+  h+='</colgroup><thead><tr><th class="corner" aria-label="Tümünü seç"></th>';
+  for(let c=0;c<s.cols;c++)h+=`<th class="ch" data-c="${c}">${colName(c)}<span class="rz" data-c="${c}"></span></th>`;
+  h+='</tr></thead><tbody>';
+  for(let r=0;r<s.rows;r++){h+=`<tr><th class="rh" data-r="${r}">${r+1}</th>`;for(let c=0;c<s.cols;c++)h+=`<td data-r="${r}" data-c="${c}"></td>`;h+='</tr>'}
+  table.innerHTML=h+'</tbody>';setTableWidth();
+  colEls=[...table.querySelectorAll('col')].slice(1);
+  chs=[...table.querySelectorAll('th.ch')];rhs=[...table.querySelectorAll('th.rh')];trs=[...table.tBodies[0].rows];
+  tds=trs.map(tr=>[...tr.cells].slice(1));
+  marked=[];sel.r=clamp(sel.r,0,s.rows-1);sel.er=clamp(sel.er,0,s.rows-1);sel.c=clamp(sel.c,0,s.cols-1);sel.ec=clamp(sel.ec,0,s.cols-1);
+  renderValues();renderSel();
+}
+function setTableWidth(){const s=sh();let w=52;for(let c=0;c<s.cols;c++)w+=s.colW[c]||110;table.style.width=w+'px'}
+function usedRect(s){let r2=-1,c2=-1;for(const [k,cell] of Object.entries(s.cells)){if(cell.v===''||cell.v==null)continue;const p=parseKey(k);r2=Math.max(r2,p.r);c2=Math.max(c2,p.c)}return r2<0?null:{r2,c2}}
+function filterEnd(s){const f=s.filter;if(!f)return -1;let end=f.r;for(const [k,cell] of Object.entries(s.cells)){if(cell.v===''||cell.v==null)continue;const p=parseKey(k);if(p.c>=f.c1&&p.c<=f.c2&&p.r>end)end=p.r}return end}
+function renderValues(){
+  cache=new Map();visiting.clear();evalSheet=null;
+  const s=sh();
+  // filtre
+  hiddenRows=new Set();dataEnd=filterEnd(s);
+  if(s.filter){const f=s.filter;const cols=Object.keys(f.crit).filter(c=>f.crit[c]&&f.crit[c].length);
+    if(cols.length)for(let r=f.r+1;r<=dataEnd;r++){for(const c of cols){const cell=s.cells[key(r,+c)];const t=cell?display(valueOf(r,+c),cell):'';if(f.crit[c].includes(t)){hiddenRows.add(r);break}}}}
+  for(let r=0;r<s.rows;r++){
+    trs[r].style.display=hiddenRows.has(r)?'none':'';rhs[r].style.cssText='';
+    for(let c=0;c<s.cols;c++){
+      const td=tds[r][c],cell=s.cells[key(r,c)];
+      if(!cell){if(td.dataset.d){td.textContent='';td.className='';td.style.cssText='';td.colSpan=1;td.rowSpan=1;delete td.dataset.d}continue}
+      const v=valueOf(r,c),st=cell.s||{};
+      td.dataset.d='1';td.colSpan=1;td.rowSpan=1;
+      td.textContent=display(v,cell);
+      let cls='';if(typeof v==='number')cls+=' n';if(isErr(v))cls+=' err';if(st.b)cls+=' b';if(st.i)cls+=' i';if(st.u)cls+=' u';if(st.wrap)cls+=' wr';
+      td.className=cls.trim();
+      let css='';if(st.al)css+=`text-align:${st.al};`;if(st.ff&&FONTS[st.ff])css+=`font-family:${FONTS[st.ff]};`;if(st.fs)css+=`font-size:${st.fs}pt;`;
+      if(st.bg){css+=`background-color:${st.bg};color:${st.fc||readable(st.bg)};`}else if(st.fc)css+=`color:${st.fc};`;
+      if(st.bd)css+=`--bd:${bdShadow(st.bd)};`;
+      td.style.cssText=css;
+    }
+  }
+  // birleştirmeler
+  for(const m of s.merges){if(m.r2>=s.rows||m.c2>=s.cols)continue;const a=tds[m.r1][m.c1];a.dataset.d='1';a.colSpan=m.c2-m.c1+1;a.rowSpan=m.r2-m.r1+1;
+    for(let r=m.r1;r<=m.r2;r++)for(let c=m.c1;c<=m.c2;c++)if(r!==m.r1||c!==m.c1){const t=tds[r][c];t.style.display='none';t.dataset.d='1'}
+    if(!(s.cells[key(m.r1,m.c1)]||{}).s?.al)a.style.textAlign='center'}
+  // filtre düğmeleri
+  if(s.filter){const f=s.filter;for(let c=f.c1;c<=f.c2&&c<s.cols;c++){const td=tds[f.r][c];td.dataset.d='1';if(!td.style.position)td.style.position='relative';td.style.paddingRight='28px';
+    const b=document.createElement('span');b.className='fbtn'+(f.crit[c]&&f.crit[c].length?' on':'');b.dataset.fc=c;b.textContent='▾';b.title='Filtrele ve sırala';td.appendChild(b)}}
+  applyFreeze(s);
+  renderCharts();
+}
+function applyFreeze(s){
+  const fr=Math.min(s.freeze.r,s.rows),fc=Math.min(s.freeze.c,s.cols);if(!fr&&!fc)return;
+  const theadH=table.tHead.offsetHeight;const tops=[];let top=theadH;for(let r=0;r<fr;r++){tops[r]=top;top+=hiddenRows.has(r)?0:trs[r].offsetHeight}
+  const lefts=[];let left=52;for(let c=0;c<fc;c++){lefts[c]=left;left+=s.colW[c]||110}
+  for(let r=0;r<fr;r++){const rh=rhs[r];rh.style.top=tops[r]+'px';rh.style.zIndex=4;if(r===fr-1)rh.style.borderBottom='2px solid var(--muted)'}
+  for(let r=0;r<s.rows;r++){if(r>=fr&&!fc)break;for(let c=0;c<s.cols;c++){
+    const inR=r<fr,inC=c<fc;if(!inR&&!inC){if(c>=fc)break;continue}
+    const td=tds[r][c],st=td.style;st.position='sticky';if(inR)st.top=tops[r]+'px';if(inC)st.left=lefts[c]+'px';st.zIndex=inR&&inC?3:2;
+    if(!st.backgroundColor)st.backgroundColor='var(--surface)';
+    if(inR&&r===fr-1)st.borderBottom='2px solid var(--muted)';if(inC&&c===fc-1)st.borderRight='2px solid var(--muted)';
+  }}
+}
+let marked=[];
+function cellRect(r,c){const m=mergeAt(r,c);if(m){r=m.r1;c=m.c1}const td=tds[r][c];return{x:td.offsetLeft,y:td.offsetTop,w:td.offsetWidth,h:td.offsetHeight}}
+function renderSel(){
+  for(const el of marked)el.classList.remove('sel','act','hl');
+  marked=[];
+  const g=range(),multi=g.r1!==g.r2||g.c1!==g.c2;
+  if(multi)for(let r=g.r1;r<=g.r2;r++)for(let c=g.c1;c<=g.c2;c++){tds[r][c].classList.add('sel');marked.push(tds[r][c])}
+  const a=tds[sel.r][sel.c];a.classList.add('act');marked.push(a);
+  for(let c=g.c1;c<=g.c2;c++){chs[c].classList.add('hl');marked.push(chs[c])}
+  for(let r=g.r1;r<=g.r2;r++){rhs[r].classList.add('hl');marked.push(rhs[r])}
+  if(document.activeElement!==nameBox)nameBox.value=multi?key(g.r1,g.c1)+':'+key(g.r2,g.c2):key(sel.r,sel.c);
+  if(!fxEditing&&!editing)fx.value=raw(sel.r,sel.c);
+  // araç çubuğu durumu
+  const cell=sh().cells[key(sel.r,sel.c)],st=(cell||{}).s||{};
+  $('bBold').setAttribute('aria-pressed',!!st.b);$('bItal').setAttribute('aria-pressed',!!st.i);$('bUnder').setAttribute('aria-pressed',!!st.u);$('bWrap').setAttribute('aria-pressed',!!st.wrap);
+  $('bMerge').setAttribute('aria-pressed',!!mergeAt(sel.r,sel.c));$('bFilter').setAttribute('aria-pressed',!!sh().filter);
+  document.querySelectorAll('[data-al]').forEach(b=>b.setAttribute('aria-pressed',st.al===b.dataset.al));
+  $('sFmt').value=cell?effFmt(cell)==='dt'?'date':effFmt(cell):'';$('sFont').value=st.ff||'';$('sSize').value=String(st.fs||11);
+  // doldurma tutamacı
+  const last=cellRect(g.r2,g.c2);const fh=$('fillh');fh.hidden=editing!=null||hiddenRows.has(g.r2);fh.style.left=(last.x+last.w-6)+'px';fh.style.top=(last.y+last.h-6)+'px';
+  // durum çubuğu
+  let txt='';
+  if(multi){let sum=0,cnt=0,filled=0;
+    for(let r=g.r1;r<=g.r2;r++){if(hiddenRows.has(r))continue;for(let c=g.c1;c<=g.c2;c++){const v=valueOf(r,c);if(v!=null&&v!=='')filled++;if(typeof v==='number'){sum+=v;cnt++}}}
+    txt=cnt?`Toplam <b>${esc(fmtGen(sum))}</b> · Ortalama <b>${esc(fmtGen(sum/cnt))}</b> · Sayı <b>${cnt}</b>`:`Dolu hücre <b>${filled}</b>`}
+  const f=sh().filter;if(f&&hiddenRows.size){const tot=Math.max(0,dataEnd-f.r);txt=(txt?txt+' · ':'')+`<b>${tot-hiddenRows.size}</b> / ${tot} kayıt görünüyor`}
+  statusEl.innerHTML=txt;
+}
+function mergeAt(r,c){for(const m of sh().merges)if(r>=m.r1&&r<=m.r2&&c>=m.c1&&c<=m.c2)return m;return null}
+function frozenSize(){const s=sh();let h=0,w=0;for(let r=0;r<s.freeze.r;r++)h+=trs[r].offsetHeight;for(let c=0;c<s.freeze.c;c++)w+=s.colW[c]||110;return{h,w}}
+function ensureVisible(r,c){
+  const R=cellRect(r,c),s=sh(),fz=frozenSize();const hh=(table.tHead.offsetHeight+(r>=s.freeze.r?fz.h:0))*zoom,rw=(52+(c>=s.freeze.c?fz.w:0))*zoom;
+  const x=R.x*zoom,y=R.y*zoom,w=R.w*zoom,h=R.h*zoom;
+  if(y-hh<wrap.scrollTop)wrap.scrollTop=y-hh;else if(y+h>wrap.scrollTop+wrap.clientHeight)wrap.scrollTop=y+h-wrap.clientHeight;
+  if(x-rw<wrap.scrollLeft)wrap.scrollLeft=x-rw;else if(x+w>wrap.scrollLeft+wrap.clientWidth)wrap.scrollLeft=x+w-wrap.clientWidth;
+}
+function skipHidden(r,dr){const s=sh();while(hiddenRows.has(r)&&r>0&&r<s.rows-1)r+=dr||1;return r}
+function move(dr,dc,ext){
+  const s=sh();
+  if(ext){sel.er=clamp(skipHidden(sel.er+dr,dr),0,s.rows-1);sel.ec=clamp(sel.ec+dc,0,s.cols-1);renderSel();ensureVisible(sel.er,sel.ec);return}
+  const m0=mergeAt(sel.r,sel.c);let r=sel.r,c=sel.c;
+  if(m0){if(dr>0)r=m0.r2;if(dc>0)c=m0.c2;if(dr<0)r=m0.r1;if(dc<0)c=m0.c1}
+  r=clamp(skipHidden(r+dr,dr),0,s.rows-1);c=clamp(c+dc,0,s.cols-1);
+  const m=mergeAt(r,c);if(m){r=m.r1;c=m.c1}
+  sel={r,c,er:r,ec:c};renderSel();ensureVisible(r,c);
+}
+function jump(dr,dc,ext){ // Ctrl + ok
+  const s=sh();let r=ext?sel.er:sel.r,c=ext?sel.ec:sel.c;const filled=(r,c)=>raw(r,c)!=='';
+  const inb=(r,c)=>r>=0&&c>=0&&r<s.rows&&c<s.cols;
+  if(filled(r,c)&&inb(r+dr,c+dc)&&filled(r+dr,c+dc)){while(inb(r+dr,c+dc)&&filled(r+dr,c+dc)){r+=dr;c+=dc}}
+  else{r+=dr;c+=dc;while(inb(r,c)&&!filled(r,c)&&inb(r+dr,c+dc)){r+=dr;c+=dc}}
+  r=clamp(r,0,s.rows-1);c=clamp(c,0,s.cols-1);
+  if(ext){sel.er=r;sel.ec=c}else sel={r,c,er:r,ec:c};renderSel();ensureVisible(r,c);
+}
+function select(r1,c1,r2,c2){sel={r:r1,c:c1,er:r2??r1,ec:c2??c1};renderSel()}
+
+/* ================= değişiklik + geri al ================= */
+let undo=[],redo=[];
+function change(fn,rebuild){
+  undo.push(JSON.stringify(state));if(undo.length>100)undo.shift();redo=[];
+  fn();save();
+  if(rebuild)buildGrid();else{renderValues();renderSel()}
+}
+function restore(from,to){if(!from.length)return;to.push(JSON.stringify(state));state=JSON.parse(from.pop());state.sheets.forEach(upgrade);renderTabs();buildGrid();save()}
+function normalizeFormula(v){return isFormula(v)?rewrite(v,(r,c)=>[r,c]).replace(REF_RE,m=>m[0]==='"'?m:m.toUpperCase()):v}
+function setRaw(r,c,v){
+  const s=sh(),k=key(r,c);let cell=s.cells[k];
+  if(v===''){if(cell){if(cell.s&&Object.keys(cell.s).length)cell.v='';else delete s.cells[k]}return}
+  if(!cell)cell=s.cells[k]={v:''};
+  const st=cell.s||{};
+  if(st.fmt==='text'){cell.v=v;return}
+  cell.v=normalizeFormula(v);
+  if(!isFormula(v)&&!st.fmt){const t=v.trim();let f='';
+    if(litDate(t)!=null)f='date';else if(/(₺|TL)$|^₺/i.test(t)&&litNum(t)!=null)f='cur';else if(/%$/.test(t)&&litNum(t)!=null)f='pct';
+    else if(/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(t))f='num';
+    if(f)cell.s={...st,fmt:f};}
+}
+
+/* ================= düzenleme ================= */
+let editing=null,fxEditing=false,point=null,dragging=false,pointing=false;
+function startEdit(initial,quick){
+  const R=cellRect(sel.r,sel.c);const m=mergeAt(sel.r,sel.c);if(m){sel.r=m.r1;sel.c=m.c1}
+  sel.er=sel.r;sel.ec=sel.c;renderSel();ensureVisible(sel.r,sel.c);
+  editing={r:sel.r,c:sel.c,quick:!!quick};
+  editor.value=initial!=null?initial:raw(sel.r,sel.c);
+  editor.style.left=R.x+'px';editor.style.top=R.y+'px';
+  editor.style.minWidth=R.w+'px';editor.style.width=Math.max(R.w,Math.min(460,editor.value.length*9+30))+'px';
+  editor.style.height=R.h+'px';
+  editor.hidden=false;$('fillh').hidden=true;editor.focus();const L=editor.value.length;editor.setSelectionRange(L,L);
+  fx.value=editor.value;point=null;updateAc(editor);
+}
+function commitEdit(){
+  if(!editing)return;const {r,c}=editing;let v=editor.value;editing=null;point=null;editor.hidden=true;hideAc();
+  v=autoClose(v);
+  if(v!==raw(r,c))change(()=>setRaw(r,c,v));else renderSel();
+}
+function autoClose(v){if(!isFormula(v))return v;let d=0,q=false;for(const ch of v){if(ch==='"')q=!q;else if(!q){if(ch==='(')d++;else if(ch===')')d--}}return d>0?v+')'.repeat(d):v}
+function cancelEdit(){editing=null;point=null;editor.hidden=true;hideAc();renderSel()}
+function commitFx(){if(!fxEditing)return;fxEditing=false;point=null;hideAc();const v=autoClose(fx.value);if(v!==raw(sel.r,sel.c))change(()=>setRaw(sel.r,sel.c,v));else renderSel();fx.blur()}
+editor.addEventListener('input',()=>{fx.value=editor.value;point=null;editor.style.width=Math.max(parseFloat(editor.style.minWidth),Math.min(460,editor.value.length*9+30))+'px';updateAc(editor)});
+editor.addEventListener('blur',()=>{setTimeout(()=>{if(editing&&document.activeElement!==editor)commitEdit()},0)});
+fx.addEventListener('focus',()=>{if(editing)commitEdit();fxEditing=true;point=null});
+fx.addEventListener('input',()=>{point=null;updateAc(fx)});
+fx.addEventListener('blur',()=>{setTimeout(()=>{if(fxEditing&&document.activeElement!==fx)commitFx()},0)});
+const activeInput=()=>editing?editor:(fxEditing&&document.activeElement===fx?fx:null);
+function pointable(inp){
+  const v=inp.value;if(v[0]!=='=')return false;
+  if(point&&point.inp===inp)return true;
+  const before=v.slice(0,inp.selectionStart).trimEnd();return/[=(+\-*/^&,;:<>]$/.test(before);
+}
+function placePoint(inp,txt){
+  const v=inp.value;let a,b;
+  if(point&&point.inp===inp){a=point.start;b=point.end}else{a=inp.selectionStart;b=inp.selectionEnd}
+  inp.value=v.slice(0,a)+txt+v.slice(b);point={...(point&&point.inp===inp?point:{}),inp,start:a,end:a+txt.length};
+  inp.setSelectionRange(point.end,point.end);
+  if(inp===editor)fx.value=editor.value;
+}
+
+/* ---------- fonksiyon önerileri ---------- */
+const ac=$('ac');let acItems=[],acIdx=0,acInp=null,acTok=null;
+function updateAc(inp,force){
+  const v=inp.value,pos=inp.selectionStart;if(v[0]!=='='){hideAc();return}
+  const before=v.slice(0,pos);const m=before.match(/(^|[=(+\-*/^&,;:<> ])([A-Za-zÇĞİÖŞÜçğıöşü_.]{1,})$/);
+  let tok;if(m)tok=m[2];else if(force&&/[=(;,+\-*/&]$/.test(before))tok='';else{hideAc();return}
+  const q=norm(tok);
+  acItems=FN.filter(f=>norm(f[0]).startsWith(q)||f[1].startsWith(q)).slice(0,q?12:FN.length);
+  if(!acItems.length){hideAc();return}
+  acInp=inp;acTok={start:pos-tok.length,end:pos};acIdx=0;
+  ac.innerHTML=acItems.map((f,i)=>`<div role="option" data-i="${i}" class="${i?'':'on'}"><b>${esc(f[0])}(${esc(f[2])})</b><span>${esc(f[3])}</span></div>`).join('');
+  const r=inp.getBoundingClientRect();ac.hidden=false;
+  const top=r.bottom+4;ac.style.left=Math.max(8,Math.min(innerWidth-ac.offsetWidth-8,r.left))+'px';
+  ac.style.top=(top+ac.offsetHeight>innerHeight-8?Math.max(8,r.top-ac.offsetHeight-4):top)+'px';
+}
+function hideAc(){ac.hidden=true;acItems=[]}
+function pickAc(i){const f=acItems[i];if(!f||!acInp)return;const inp=acInp,v=inp.value;
+  inp.value=v.slice(0,acTok.start)+f[0]+'('+v.slice(acTok.end);const p=acTok.start+f[0].length+1;inp.focus();inp.setSelectionRange(p,p);
+  if(inp===editor){fx.value=editor.value;editor.style.width=Math.max(parseFloat(editor.style.minWidth),Math.min(460,editor.value.length*9+30))+'px'}hideAc();point=null}
+ac.addEventListener('mousedown',e=>{e.preventDefault();const d=e.target.closest('[data-i]');if(d)pickAc(+d.dataset.i)});
+function acKey(e){if(ac.hidden)return false;
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();acIdx=(acIdx+(e.key==='ArrowDown'?1:-1)+acItems.length)%acItems.length;
+    ac.querySelectorAll('[data-i]').forEach((d,i)=>d.classList.toggle('on',i===acIdx));ac.children[acIdx].scrollIntoView({block:'nearest'});return true}
+  if(e.key==='Tab'||(e.key==='Enter'&&acItems.length)){e.preventDefault();pickAc(acIdx);return true}
+  if(e.key==='Escape'){e.preventDefault();hideAc();return true}
+  return false}
+$('bFx').onclick=()=>{if(editing){editor.focus();updateAc(editor,true);return}if(raw(sel.r,sel.c)===''){startEdit('=',false);updateAc(editor,true)}else{fx.focus();if(fx.value[0]!=='=')fx.value='=';fx.setSelectionRange(fx.value.length,fx.value.length);updateAc(fx,true)}};
+
+/* ================= fare / dokunma ================= */
+table.addEventListener('mousedown',e=>{if(e.target.closest('td,th'))e.preventDefault()});
+table.addEventListener('pointerdown',e=>{
+  if(e.target.classList.contains('rz'))return;
+  const fb=e.target.closest('.fbtn');if(fb){e.preventDefault();e.stopPropagation();openFilter(+fb.dataset.fc,fb);return}
+  const td=e.target.closest('td');
+  const inp=activeInput();
+  if(td){
+    const r=+td.dataset.r,c=+td.dataset.c;
+    if(inp&&pointable(inp)){point={...(point||{}),r0:r,c0:c};placePoint(inp,key(r,c));pointing=e.pointerType==='mouse';hideAc();return}
+    if(editing)commitEdit();if(fxEditing)commitFx();
+    const wasActive=sel.r===r&&sel.c===c&&sel.er===r&&sel.ec===c;
+    if(e.shiftKey){sel.er=r;sel.ec=c}else{sel={r,c,er:r,ec:c}}
+    const m=mergeAt(r,c);if(m&&!e.shiftKey){sel.er=m.r2;sel.ec=m.c2}
+    renderSel();
+    if(e.pointerType==='mouse')dragging=true;else if(wasActive)startEdit(null,false);
+    return;
+  }
+  const th=e.target.closest('th');if(!th)return;
+  if(editing)commitEdit();if(fxEditing)commitFx();
+  const s=sh();
+  if(th.classList.contains('corner'))select(0,0,s.rows-1,s.cols-1);
+  else if(th.classList.contains('ch')){const c=+th.dataset.c;if(e.shiftKey){sel.r=0;sel.er=s.rows-1;sel.ec=c;renderSel()}else select(0,c,s.rows-1,c)}
+  else if(th.classList.contains('rh')){const r=+th.dataset.r;if(e.shiftKey){sel.c=0;sel.ec=s.cols-1;sel.er=r;renderSel()}else select(r,0,r,s.cols-1)}
+});
+table.addEventListener('pointerover',e=>{
+  const td=e.target.closest('td');if(!td)return;const r=+td.dataset.r,c=+td.dataset.c;
+  if(pointing&&point){const inp=point.inp;const r1=Math.min(point.r0,r),r2=Math.max(point.r0,r),c1=Math.min(point.c0,c),c2=Math.max(point.c0,c);
+    placePoint(inp,(r1===r2&&c1===c2)?key(r1,c1):key(r1,c1)+':'+key(r2,c2));return}
+  if(dragging&&(sel.er!==r||sel.ec!==c)){sel.er=r;sel.ec=c;renderSel()}
+});
+window.addEventListener('pointerup',()=>{dragging=false;pointing=false});
+table.addEventListener('dblclick',e=>{const td=e.target.closest('td');if(td&&!e.target.closest('.fbtn')&&!editing&&!activeInput())startEdit(null,false)});
+// sütun genişliği (çift tıkla: içeriğe sığdır)
+table.addEventListener('pointerdown',e=>{
+  if(!e.target.classList.contains('rz'))return;e.stopPropagation();e.preventDefault();
+  const c=+e.target.dataset.c,x0=e.clientX,w0=colEls[c].getBoundingClientRect().width/zoom;
+  const mv=ev=>{colEls[c].style.width=Math.max(30,w0+(ev.clientX-x0)/zoom)+'px';let t=52;colEls.forEach(x=>t+=parseFloat(x.style.width)||110);table.style.width=t+'px'};
+  const up=()=>{window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up);sh().colW[c]=Math.round(parseFloat(colEls[c].style.width));setTableWidth();save();renderValues();renderSel()};
+  window.addEventListener('pointermove',mv);window.addEventListener('pointerup',up);
+},true);
+table.addEventListener('dblclick',e=>{if(!e.target.classList.contains('rz'))return;const c=+e.target.dataset.c;const s=sh();let w=60;
+  const cv=document.createElement('canvas').getContext('2d');for(let r=0;r<s.rows;r++){const td=tds[r][c];if(!td.textContent)continue;cv.font=getComputedStyle(td).font;w=Math.max(w,cv.measureText(td.textContent).width+22)}
+  change(()=>{s.colW[c]=Math.min(600,Math.ceil(w))},true)});
+
+/* ---------- doldurma tutamacı ---------- */
+const fillh=$('fillh'),fillprev=$('fillprev');let fillDrag=null;
+fillh.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(editing)commitEdit();fillDrag={g:range(),dir:null,n:0};fillh.setPointerCapture(e.pointerId)});
+fillh.addEventListener('pointermove',e=>{if(!fillDrag)return;const el=document.elementFromPoint(e.clientX,e.clientY);const td=el&&el.closest&&el.closest('#grid td');if(!td)return;
+  const r=+td.dataset.r,c=+td.dataset.c,g=fillDrag.g;let dir=null,n=0;
+  const dDown=r-g.r2,dUp=g.r1-r,dR=c-g.c2,dL=g.c1-c;const best=Math.max(dDown,dUp,dR,dL);
+  if(best>0){if(best===dDown){dir='down';n=dDown}else if(best===dUp){dir='up';n=dUp}else if(best===dR){dir='right';n=dR}else{dir='left';n=dL}}
+  fillDrag.dir=dir;fillDrag.n=n;
+  if(!dir){fillprev.hidden=true;return}
+  let t={...g};if(dir==='down')t.r2+=n;if(dir==='up')t.r1-=n;if(dir==='right')t.c2+=n;if(dir==='left')t.c1-=n;
+  const a=cellRect(t.r1,t.c1),b=cellRect(t.r2,t.c2);Object.assign(fillprev.style,{left:a.x+'px',top:a.y+'px',width:(b.x+b.w-a.x)+'px',height:(b.y+b.h-a.y)+'px'});fillprev.hidden=false;
+});
+fillh.addEventListener('pointerup',()=>{if(!fillDrag)return;const {g,dir,n}=fillDrag;fillDrag=null;fillprev.hidden=true;if(dir&&n>0)doFill(g,dir,n)});
+fillh.addEventListener('dblclick',()=>{ // sol sütunun sonuna kadar aşağı doldur
+  const g=range(),s=sh();const ref=g.c1>0?g.c1-1:g.c2+1;let end=g.r2;while(end+1<s.rows&&raw(end+1,ref)!=='')end++;if(end>g.r2)doFill(g,'down',end-g.r2)});
+const SERIES=[AYLAR,GUNLER,AYLAR.map(a=>a.slice(0,3)),['Pzt','Sal','Çar','Per','Cum','Cmt','Paz'],['1. Çeyrek','2. Çeyrek','3. Çeyrek','4. Çeyrek']];
+function seriesOf(raws){
+  const n=raws.length;
+  if(raws.every(v=>v!==''&&!isFormula(v))){
+    const nums=raws.map(v=>litNum(v));
+    if(nums.every(x=>x!=null)&&n>=2){const step=(nums[n-1]-nums[0])/(n-1);return i=>{const x=nums[n-1]+step*i;return fmtGen(parseFloat(x.toPrecision(12)))}}
+    const ds=raws.map(litDate);
+    if(ds.every(x=>x!=null)){const step=n>=2?(ds[n-1]-ds[0])/(n-1):1;return i=>fmtDate(Math.round(ds[n-1]+step*i))}
+    for(const L of SERIES){const ix=raws.map(v=>L.findIndex(x=>x.toLocaleLowerCase('tr')===v.trim().toLocaleLowerCase('tr')));
+      if(ix.every(x=>x>=0)){const step=n>=2?ix[n-1]-ix[n-2]:1;return i=>L[(((ix[n-1]+step*i)%L.length)+L.length)%L.length]}}
+    const tm=raws.map(v=>v.match(/^(.*?)(\d+)$/));
+    if(tm.every(x=>x)&&tm[0][1]!==''&&tm.every(x=>x[1]===tm[0][1])){const ns=tm.map(x=>+x[2]);const step=n>=2?(ns[n-1]-ns[0])/(n-1):1;const w=tm[n-1][2].length;
+      return i=>tm[0][1]+String(Math.round(ns[n-1]+step*i)).padStart(tm[n-1][2][0]==='0'?w:0,'0')}
+  }
+  return null;
+}
+function doFill(g,dir,n){
+  const s=sh();const vert=dir==='down'||dir==='up',fwd=dir==='down'||dir==='right';
+  const need=vert?(fwd?g.r2+n:0):(fwd?g.c2+n:0);
+  if(vert&&fwd&&need>=s.rows)s.rows=need+20;if(!vert&&fwd&&need>=s.cols)s.cols=need+5;
+  change(()=>{
+    const lines=vert?[...Array(g.c2-g.c1+1).keys()].map(i=>g.c1+i):[...Array(g.r2-g.r1+1).keys()].map(i=>g.r1+i);
+    for(const L of lines){
+      let pos=vert?[...Array(g.r2-g.r1+1).keys()].map(i=>[g.r1+i,L]):[...Array(g.c2-g.c1+1).keys()].map(i=>[L,g.c1+i]);
+      if(!fwd)pos=pos.reverse();
+      const srcCells=pos.map(([r,c])=>s.cells[key(r,c)]?JSON.parse(JSON.stringify(s.cells[key(r,c)])):null);
+      const raws=srcCells.map(x=>x&&x.v!=null?String(x.v):'');
+      const ser=seriesOf(raws);
+      const [lr,lc]=pos[pos.length-1];
+      for(let i=1;i<=n;i++){
+        const tr=vert?lr+(fwd?i:-i):lr,tc=vert?lc:lc+(fwd?i:-i);if(tr<0||tc<0)break;
+        const si=(i-1)%pos.length,src=srcCells[si],[sr,sc]=pos[si];const k=key(tr,tc);
+        if(!src){delete s.cells[k];continue}
+        const out=JSON.parse(JSON.stringify(src));
+        if(ser)out.v=ser(i);else if(isFormula(out.v))out.v=shiftFormula(out.v,tr-sr,tc-sc);
+        s.cells[k]=out;
+      }
+    }
+  },(vert&&fwd&&need>=tds.length)||(!vert&&fwd&&need>=(tds[0]||[]).length));
+  let t={...g};if(dir==='down')t.r2+=n;if(dir==='up')t.r1=Math.max(0,t.r1-n);if(dir==='right')t.c2+=n;if(dir==='left')t.c1=Math.max(0,t.c1-n);
+  select(t.r1,t.c1,t.r2,t.c2);
+}
+function fillDir(dir){const g=range();if(dir==='down'){if(g.r1===g.r2){if(g.r1===0)return;g.r1--;}const src={r1:g.r1,r2:g.r1,c1:g.c1,c2:g.c2};
+    change(()=>{const s=sh();for(let r=src.r1+1;r<=g.r2;r++)for(let c=g.c1;c<=g.c2;c++){const x=s.cells[key(src.r1,c)];const k=key(r,c);if(!x){delete s.cells[k];continue}const o=JSON.parse(JSON.stringify(x));if(isFormula(o.v))o.v=shiftFormula(o.v,r-src.r1,0);s.cells[k]=o}})}
+  else{if(g.c1===g.c2){if(g.c1===0)return;g.c1--;}
+    change(()=>{const s=sh();for(let c=g.c1+1;c<=g.c2;c++)for(let r=g.r1;r<=g.r2;r++){const x=s.cells[key(r,g.c1)];const k=key(r,c);if(!x){delete s.cells[k];continue}const o=JSON.parse(JSON.stringify(x));if(isFormula(o.v))o.v=shiftFormula(o.v,0,c-g.c1);s.cells[k]=o}})}}
+
+/* ================= klavye ================= */
+const ARROWS={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]};
+document.addEventListener('keydown',e=>{
+  const t=e.target,ctrl=e.ctrlKey||e.metaKey;
+  if(!$('help').hidden){if(e.key==='Escape')$('help').hidden=true;return}
+  if(!$('confirmBox').hidden){if(e.key==='Escape')$('confirmBox').hidden=true;return}
+  if(e.key==='Escape'){closePops()}
+  if(t===editor||t===fx){
+    if(acKey(e))return;
+    if(t===editor){
+      if(e.key==='Enter'){e.preventDefault();commitEdit();if(e.altKey)return;move(e.shiftKey?-1:1,0);return}
+      if(e.key==='Tab'){e.preventDefault();commitEdit();move(0,e.shiftKey?-1:1);return}
+      if(e.key==='Escape'){e.preventDefault();cancelEdit();return}
+      if(editing&&editing.quick&&ARROWS[e.key]&&!pointable(editor)){e.preventDefault();commitEdit();move(...ARROWS[e.key]);return}
+    }else{
+      if(e.key==='Enter'){e.preventDefault();commitFx();move(1,0);return}
+      if(e.key==='Escape'){e.preventDefault();fxEditing=false;hideAc();fx.value=raw(sel.r,sel.c);fx.blur();return}
+    }
+    return;
+  }
+  if(t===nameBox){if(e.key==='Enter'){e.preventDefault();goTo(nameBox.value);nameBox.blur()}return}
+  if(t.closest&&t.closest('input,select,textarea,[contenteditable="true"],.pop,.menu'))return;
+  if(t.tagName==='BUTTON'&&(e.key==='Enter'||e.key===' '))return;
+  if(e.altKey&&(e.key==='='||e.code==='Digit0'&&e.shiftKey)){e.preventDefault();autoSum();return}
+  if(ctrl){
+    const k=e.key.toLowerCase();
+    if(ARROWS[e.key]){e.preventDefault();jump(...ARROWS[e.key],e.shiftKey);return}
+    if(k==='z'&&!e.shiftKey){e.preventDefault();restore(undo,redo);return}
+    if(k==='y'||(k==='z'&&e.shiftKey)){e.preventDefault();restore(redo,undo);return}
+    if(k==='b'){e.preventDefault();toggleStyle('b');return}
+    if(k==='i'){e.preventDefault();toggleStyle('i');return}
+    if(k==='u'){e.preventDefault();toggleStyle('u');return}
+    if(k==='d'){e.preventDefault();fillDir('down');return}
+    if(k==='r'){e.preventDefault();fillDir('right');return}
+    if(k==='f'||k==='h'){e.preventDefault();openFind();return}
+    if(k==='o'){e.preventDefault();openFile();return}
+    if(k==='p'){e.preventDefault();printSheet();return}
+    if(k==='l'&&e.shiftKey){e.preventDefault();toggleFilter();return}
+    if(k===';'||e.code==='Comma'&&false){e.preventDefault();change(()=>setRaw(sel.r,sel.c,fmtDate(todaySerial())));return}
+    if(k==='a'){e.preventDefault();const s=sh();select(0,0,s.rows-1,s.cols-1);return}
+    if(k==='s'){e.preventDefault();save();toast('Kaydedildi. Dosya olarak almak için "Excel olarak indir"i kullan.');return}
+    return;
+  }
+  if(ARROWS[e.key]){e.preventDefault();move(...ARROWS[e.key],e.shiftKey);return}
+  if(e.key==='Enter'){e.preventDefault();move(e.shiftKey?-1:1,0);return}
+  if(e.key==='Tab'){e.preventDefault();move(0,e.shiftKey?-1:1);return}
+  if(e.key==='F2'){e.preventDefault();startEdit(null,false);return}
+  if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();clearRange();return}
+  if(e.key==='Home'){e.preventDefault();move(0,-sel.c);return}
+  if(e.key==='PageDown'||e.key==='PageUp'){e.preventDefault();move((e.key==='PageDown'?1:-1)*Math.max(5,Math.floor(wrap.clientHeight/30/zoom)-2),0,e.shiftKey);return}
+  if((e.key.length===1&&!e.altKey)||e.key==='Process'||e.key==='Dead'||e.key==='Unidentified'){startEdit('',true)}
+});
+function goTo(txt){
+  const m=txt.trim().toUpperCase().match(/^\$?([A-Z]{1,3})\$?(\d+)(?::\$?([A-Z]{1,3})\$?(\d+))?$/);
+  if(!m){toast('Adres anlaşılamadı. Örnek: B5 veya A1:C10');renderSel();return}
+  const s=sh();const r1=clamp(+m[2]-1,0,s.rows-1),c1=clamp(colIndex(m[1]),0,s.cols-1);
+  const r2=m[3]?clamp(+m[4]-1,0,s.rows-1):r1,c2=m[3]?clamp(colIndex(m[3]),0,s.cols-1):c1;
+  select(r1,c1,r2,c2);ensureVisible(r2,c2);
+}
+
+/* ================= biçim işlemleri ================= */
+function eachInRange(fn){const g=range();for(let r=g.r1;r<=g.r2;r++){if(hiddenRows.has(r))continue;for(let c=g.c1;c<=g.c2;c++)fn(r,c)}}
+function clearRange(){change(()=>eachInRange((r,c)=>setRaw(r,c,'')))}
+function styleCell(r,c,fn){const s=sh(),k=key(r,c);let cell=s.cells[k];if(!cell)cell=s.cells[k]={v:''};cell.s=cell.s||{};fn(cell.s);
+  for(const p in cell.s)if(cell.s[p]==null||cell.s[p]===0&&p!=='dec'||cell.s[p]==='')delete cell.s[p];
+  if(!Object.keys(cell.s).length)delete cell.s;if(!cell.s&&cell.v==='')delete s.cells[k]}
+function setStyle(prop,val){change(()=>eachInRange((r,c)=>styleCell(r,c,st=>{st[prop]=val})))}
+function toggleStyle(p){const st=(sh().cells[key(sel.r,sel.c)]||{}).s||{};setStyle(p,st[p]?null:1)}
+$('bBold').onclick=()=>toggleStyle('b');$('bItal').onclick=()=>toggleStyle('i');$('bUnder').onclick=()=>toggleStyle('u');$('bWrap').onclick=()=>toggleStyle('wrap');
+document.querySelectorAll('[data-al]').forEach(b=>b.onclick=()=>{const st=(sh().cells[key(sel.r,sel.c)]||{}).s||{};setStyle('al',st.al===b.dataset.al?null:b.dataset.al)});
+$('sFmt').onchange=e=>{const v=e.target.value;change(()=>eachInRange((r,c)=>styleCell(r,c,st=>{st.fmt=v||null;delete st.dec})));e.target.blur()};
+$('sFont').onchange=e=>{setStyle('ff',e.target.value||null);e.target.blur()};
+$('sSize').onchange=e=>{const v=+e.target.value;setStyle('fs',v===11?null:v);e.target.blur()};
+const cFc=$('cFc'),cBg=$('cBg');
+cFc.addEventListener('input',()=>$('swFc').style.setProperty('--sw',cFc.value));cFc.addEventListener('change',()=>setStyle('fc',cFc.value));
+cBg.addEventListener('input',()=>$('swBg').style.setProperty('--sw',cBg.value));cBg.addEventListener('change',()=>setStyle('bg',cBg.value));
+$('sBorder').onchange=e=>{const v=e.target.value;e.target.value='';e.target.blur();if(!v)return;const g=range();
+  if(v==='nofill'){setStyle('bg',null);return}
+  change(()=>eachInRange((r,c)=>styleCell(r,c,st=>{let b={...(st.bd||{})};
+    if(v==='none')b={};
+    else if(v==='all')b={t:1,b:1,l:1,r:1};
+    else if(v==='outer'||v==='thick'){const w=v==='thick'?2:1;if(r===g.r1)b.t=w;if(r===g.r2)b.b=w;if(c===g.c1)b.l=w;if(c===g.c2)b.r=w}
+    else if(v==='bottom'&&r===g.r2)b.b=1;else if(v==='dbottom'&&r===g.r2)b.b=3;
+    st.bd=Object.keys(b).length?b:null})))};
+function curDec(){const cell=sh().cells[key(sel.r,sel.c)];if(!cell)return 0;const st=cell.s||{};if(st.dec!=null)return st.dec;const f=effFmt(cell);const v=valueOf(sel.r,sel.c);
+  if(f==='num'||f==='cur')return 2;if(f==='int')return 0;if(f==='pct')return typeof v==='number'?Math.max(0,decOf(v*100)):0;return typeof v==='number'?decOf(v):0}
+$('bDecUp').onclick=()=>{const d=Math.min(10,curDec()+1);setStyle('dec',d)};
+$('bDecDn').onclick=()=>{const d=Math.max(0,curDec()-1);setStyle('dec',d)};
+$('bUndo').onclick=()=>restore(undo,redo);$('bRedo').onclick=()=>restore(redo,undo);
+
+// birleştir
+$('bMerge').onclick=()=>{const g=range(),s=sh();const m=mergeAt(sel.r,sel.c);
+  if(m&&m.r1===g.r1&&m.c1===g.c1&&m.r2===g.r2&&m.c2===g.c2||m&&g.r1===g.r2&&g.c1===g.c2){change(()=>{s.merges=s.merges.filter(x=>x!==m)});toast('Hücrelerin birleştirmesi kaldırıldı');return}
+  if(g.r1===g.r2&&g.c1===g.c2){toast('Birleştirmek için birden fazla hücre seç');return}
+  let lost=false;for(let r=g.r1;r<=g.r2;r++)for(let c=g.c1;c<=g.c2;c++)if((r!==g.r1||c!==g.c1)&&raw(r,c)!=='')lost=true;
+  const go=()=>change(()=>{s.merges=s.merges.filter(x=>x.r2<g.r1||x.r1>g.r2||x.c2<g.c1||x.c1>g.c2);s.merges.push({...g});
+    for(let r=g.r1;r<=g.r2;r++)for(let c=g.c1;c<=g.c2;c++)if(r!==g.r1||c!==g.c1)delete s.cells[key(r,c)];
+    styleCell(g.r1,g.c1,st=>{st.al='center'})});
+  if(lost)ask('Birleştirince yalnızca sol üstteki hücrenin değeri kalır, diğerleri silinir.',go);else go();
+};
+
+// sırala
+function regionAround(r,c){const s=sh();let g={r1:r,r2:r,c1:c,c2:c};const has=(r,c)=>r>=0&&c>=0&&r<s.rows&&c<s.cols&&raw(r,c)!=='';
+  for(let it=0;it<200;it++){let ch=false;
+    if(g.r1>0){for(let x=g.c1-1;x<=g.c2+1;x++)if(has(g.r1-1,x)){g.r1--;ch=true;break}}
+    for(let x=g.c1-1;x<=g.c2+1;x++)if(has(g.r2+1,x)){g.r2++;ch=true;break}
+    if(g.c1>0){for(let y=g.r1-1;y<=g.r2+1;y++)if(has(y,g.c1-1)){g.c1--;ch=true;break}}
+    for(let y=g.r1-1;y<=g.r2+1;y++)if(has(y,g.c2+1)){g.c2++;ch=true;break}
+    if(!ch)break}
+  return g}
+function hasHeader(g){for(let c=g.c1;c<=g.c2;c++){const v=valueOf(g.r1,c),b=valueOf(g.r1+1,c);if(typeof v==='string'&&v!==''&&(typeof b==='number'||b==null))return true}
+  const st=(sh().cells[key(g.r1,g.c1)]||{}).s||{};return !!st.b}
+function sortRows(r1,r2,c1,c2,col,desc){
+  const s=sh();
+  change(()=>{
+    const rows=[];for(let r=r1;r<=r2;r++){const cells=[];for(let c=c1;c<=c2;c++)cells.push(s.cells[key(r,c)]||null);let k=valueOf(r,col);if(k===''||isErr(k))k=null;rows.push({k,cells,r})}
+    rows.sort((a,b)=>{if(a.k==null&&b.k==null)return a.r-b.r;if(a.k==null)return 1;if(b.k==null)return-1;const x=compare(a.k,b.k);return(desc?-x:x)||a.r-b.r});
+    rows.forEach((row,i)=>row.cells.forEach((cell,j)=>{const k=key(r1+i,c1+j);if(cell){if(isFormula(cell.v))cell.v=shiftFormula(cell.v,r1+i-row.r,0);s.cells[k]=cell}else delete s.cells[k]}));
+  });
+}
+function sortBy(desc){
+  const s=sh();let g=range();const col=sel.c;
+  if(s.filter&&col>=s.filter.c1&&col<=s.filter.c2&&g.r1===g.r2&&g.c1===g.c2){sortRows(s.filter.r+1,dataEnd,s.filter.c1,s.filter.c2,col,desc);toast(`${colName(col)} sütununa göre sıralandı`);return}
+  if(g.r1===g.r2&&g.c1===g.c2){if(raw(sel.r,sel.c)===''){toast('Sıralamak için verilerin içinde bir hücre seç');return}g=regionAround(sel.r,sel.c);if(hasHeader(g))g.r1++}
+  if(g.r1>=g.r2){toast('Sıralanacak birden fazla satır yok');return}
+  sortRows(g.r1,g.r2,g.c1,g.c2,clamp(col,g.c1,g.c2),desc);toast(`${colName(col)} sütununa göre ${desc?'azalan':'artan'} sıralandı`);
+}
+$('bAsc').onclick=()=>sortBy(false);$('bDesc').onclick=()=>sortBy(true);
+
+// satır / sütun
+function structural(kind,del,idx){
+  const s=sh();
+  change(()=>{
+    const out={};
+    const map=(r,c,ar,ac,role)=>{let v=kind==='r'?r:c;
+      if(!del){if(v>=idx)v++}
+      else{if(role==='single'){if(v===idx)return null;if(v>idx)v--}else if(role==='start'){if(v>idx)v--}else{if(v>=idx)v--}}
+      return kind==='r'?[v,c]:[r,v]};
+    for(const [k,cell] of Object.entries(s.cells)){
+      const p=parseKey(k);let v=p[kind];
+      if(del){if(v===idx)continue;if(v>idx)v--}else if(v>=idx)v++;
+      p[kind]=v;if(isFormula(cell.v))cell.v=rewrite(cell.v,map);out[key(p.r,p.c)]=cell;
+    }
+    s.cells=out;
+    const sh1=(a,b)=>{const lo=kind==='r'?'r1':'c1',hi=kind==='r'?'r2':'c2';return[a,b,lo,hi]};
+    s.merges=s.merges.filter(m=>{const [,,lo,hi]=sh1();if(del){if(m[lo]===idx&&m[hi]===idx)return false;if(m[lo]>idx)m[lo]--;if(m[hi]>=idx)m[hi]--;}else{if(m[lo]>=idx)m[lo]++;if(m[hi]>=idx)m[hi]++}return m.r2>=m.r1&&m.c2>=m.c1&&(m.r2>m.r1||m.c2>m.c1)});
+    if(s.filter){const f=s.filter;if(kind==='r'){if(del&&f.r===idx)s.filter=null;else if(f.r>=idx)f.r+=del?-1:1}
+      else{if(del&&f.c1===idx&&f.c2===idx)s.filter=null;else{if(f.c1>idx||(!del&&f.c1>=idx))f.c1+=del?-1:1;if(f.c2>=idx)f.c2+=del?-1:1;const nc={};for(const [c,v] of Object.entries(f.crit)){let n=+c;if(del&&n===idx)continue;if(n>=idx&&!(del&&n<idx))n+=del?-1:1;nc[n]=v}f.crit=nc}}}
+    s.charts.forEach(ch=>{ch.ref=rewrite(ch.ref,map)});
+    if(kind==='c'){const w={};for(const [c,val] of Object.entries(s.colW)){let n=+c;if(del){if(n===idx)continue;if(n>idx)n--}else if(n>=idx)n++;w[n]=val}s.colW=w;if(!del)s.cols++}
+    else if(!del)s.rows++;
+  },true);
+}
+$('sStruct').onchange=e=>{const v=e.target.value;e.target.value='';e.target.blur();if(!v)return;
+  if(v==='ir')structural('r',false,sel.r);if(v==='ib')structural('r',false,range().r2+1);if(v==='dr')structural('r',true,sel.r);
+  if(v==='ic')structural('c',false,sel.c);if(v==='ia')structural('c',false,range().c2+1);if(v==='dc')structural('c',true,sel.c)};
+// dondur
+$('sFreeze').onchange=e=>{const v=e.target.value;e.target.value='';e.target.blur();if(!v)return;
+  change(()=>{const f=sh().freeze;if(v==='row'){f.r=1;f.c=0}else if(v==='col'){f.r=0;f.c=1}else if(v==='sel'){f.r=sel.r;f.c=sel.c}else{f.r=0;f.c=0}});
+  toast(v==='none'?'Dondurma kaldırıldı':'Bölmeler donduruldu')};
+// otomatik toplam
+function autoSum(){
+  const g=range();const s=sh();
+  if(g.r1===g.r2&&g.c1===g.c2){
+    let r=sel.r-1;while(r>=0&&typeof valueOf(r,sel.c)==='number')r--;
+    if(r<sel.r-1){change(()=>setRaw(sel.r,sel.c,`=TOPLA(${key(r+1,sel.c)}:${key(sel.r-1,sel.c)})`));return}
+    let c=sel.c-1;while(c>=0&&typeof valueOf(sel.r,c)==='number')c--;
+    if(c<sel.c-1){change(()=>setRaw(sel.r,sel.c,`=TOPLA(${key(sel.r,c+1)}:${key(sel.r,sel.c-1)})`));return}
+    startEdit('=TOPLA(',false);return}
+  const tr=g.r2+1;if(tr>=s.rows){toast('Seçimin altında boş satır yok');return}
+  change(()=>{for(let c=g.c1;c<=g.c2;c++){setRaw(tr,c,`=TOPLA(${key(g.r1,c)}:${key(g.r2,c)})`);styleCell(tr,c,st=>{st.b=1;const src=(s.cells[key(g.r2,c)]||{}).s;if(src&&src.fmt&&!st.fmt)st.fmt=src.fmt})}});
+  select(tr,g.c1,tr,g.c2);
+}
+$('bSum').onclick=autoSum;
+// yakınlaştırma
+$('sZoom').onchange=e=>{zoom=+e.target.value;sheetEl.style.zoom=zoom;e.target.blur();renderValues();renderSel()};
+
+/* ================= filtre ================= */
+function toggleFilter(){
+  const s=sh();
+  if(s.filter){change(()=>{s.filter=null});toast('Filtre kaldırıldı');return}
+  let g=range();
+  if(g.r1===g.r2&&g.c1===g.c2){if(raw(sel.r,sel.c)===''){toast('Önce başlık satırındaki bir hücreyi seç');return}g=regionAround(sel.r,sel.c)}
+  change(()=>{s.filter={r:g.r1,c1:g.c1,c2:g.c2,crit:{}}});toast('Filtre açıldı. Başlıklardaki ▾ düğmesini kullan.');
+}
+$('bFilter').onclick=toggleFilter;
+let fCol=-1,fState=null;
+function openFilter(c,anchor){
+  closePops();const s=sh(),f=s.filter;fCol=c;
+  const counts=new Map();for(let r=f.r+1;r<=dataEnd;r++){const cell=s.cells[key(r,c)];const t=cell?display(valueOf(r,c),cell):'';counts.set(t,(counts.get(t)||0)+1)}
+  const vals=[...counts.keys()].sort((a,b)=>{const na=litNum(a)??litDate(a),nb=litNum(b)??litDate(b);if(a==='')return 1;if(b==='')return-1;if(na!=null&&nb!=null)return na-nb;return a.localeCompare(b,'tr',{numeric:true})});
+  const ex=new Set(f.crit[c]||[]);fState={vals,ex};
+  renderFvals('');$('fpSearch').value='';
+  const pop=$('filterPop');pop.hidden=false;const r=anchor.getBoundingClientRect();
+  pop.style.left=Math.max(8,Math.min(innerWidth-pop.offsetWidth-8,r.left-pop.offsetWidth+r.width))+'px';pop.style.top=Math.min(innerHeight-pop.offsetHeight-8,r.bottom+4)+'px';
+  $('fpSearch').focus();
+}
+function renderFvals(q){const {vals,ex}=fState;q=q.toLocaleLowerCase('tr');
+  const shown=vals.filter(v=>!q||v.toLocaleLowerCase('tr').includes(q));
+  const allOn=shown.every(v=>!ex.has(v));
+  $('fvals').innerHTML=`<label><input type="checkbox" data-all="1" ${allOn?'checked':''}> <b>(Tümünü seç)</b></label>`+shown.map((v,i)=>`<label><input type="checkbox" data-v="${esc(v)}" ${ex.has(v)?'':'checked'}> ${v===''?'<i>(Boş)</i>':esc(v)}</label>`).join('');
+}
+$('fpSearch').addEventListener('input',e=>renderFvals(e.target.value));
+$('fvals').addEventListener('change',e=>{const cb=e.target;const {ex}=fState;
+  if(cb.dataset.all){$('fvals').querySelectorAll('input[data-v]').forEach(x=>{x.checked=cb.checked;if(cb.checked)ex.delete(x.dataset.v);else ex.add(x.dataset.v)});return}
+  if(cb.checked)ex.delete(cb.dataset.v);else ex.add(cb.dataset.v)});
+$('fpOk').onclick=()=>{const s=sh(),c=fCol,ex=[...fState.ex];$('filterPop').hidden=true;change(()=>{if(ex.length)s.filter.crit[c]=ex;else delete s.filter.crit[c]})};
+$('fpClear').onclick=()=>{const s=sh();$('filterPop').hidden=true;change(()=>{delete s.filter.crit[fCol]})};
+$('fpAsc').onclick=()=>{const s=sh();$('filterPop').hidden=true;sortRows(s.filter.r+1,dataEnd,s.filter.c1,s.filter.c2,fCol,false)};
+$('fpDesc').onclick=()=>{const s=sh();$('filterPop').hidden=true;sortRows(s.filter.r+1,dataEnd,s.filter.c1,s.filter.c2,fCol,true)};
+function closePops(){$('filterPop').hidden=true;$('fileMenu').hidden=true;hideAc()}
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('.pop,.menu,#ac,#bFile,.fbtn'))closePops()});
+
+/* ================= grafikler ================= */
+const PAL=['#1f9d6a','#3b73e0','#e0901a','#d6457a','#8b5cf6','#0ea5b7','#7a9a1f','#64748b'];
+const cfmt=new Intl.NumberFormat('tr-TR',{notation:'compact',maximumFractionDigits:1});
+function parseRef(ref){const m=String(ref).toUpperCase().replace(/\$/g,'').match(/^([A-Z]{1,3})(\d+)(?::([A-Z]{1,3})(\d+))?$/);if(!m)return null;
+  const a={r:+m[2]-1,c:colIndex(m[1])},b=m[3]?{r:+m[4]-1,c:colIndex(m[3])}:a;return{r1:Math.min(a.r,b.r),r2:Math.max(a.r,b.r),c1:Math.min(a.c,b.c),c2:Math.max(a.c,b.c)}}
+function chartData(ref){
+  const g=parseRef(ref);if(!g)return null;
+  const V=(r,c)=>valueOf(r,c),txt=(r,c)=>{const cell=sh().cells[key(r,c)];return cell?display(V(r,c),cell):''};
+  const isNum=v=>typeof v==='number';
+  let hdr=false;for(let c=g.c1;c<=g.c2;c++){const v=V(g.r1,c);if(v!=null&&v!==''&&!isNum(v))hdr=true}
+  let cat=false;for(let r=g.r1+(hdr?1:0);r<=g.r2;r++){const v=V(r,g.c1);if(v!=null&&v!==''&&!isNum(v))cat=true}
+  if(!cat&&hdr&&g.c2>g.c1){const v=V(g.r1+1,g.c1);if(sh().cells[key(g.r1+1,g.c1)]&&effFmt(sh().cells[key(g.r1+1,g.c1)])==='date')cat=true}
+  const r0=g.r1+(hdr?1:0),c0=g.c1+(cat?1:0);
+  const nR=g.r2-r0+1,nC=g.c2-c0+1;if(nR<1||nC<1)return null;
+  const byRows=nC>nR&&nR<=8;
+  let cats=[],series=[];
+  if(!byRows){for(let r=r0;r<=g.r2;r++)cats.push(cat?txt(r,g.c1):String(r-r0+1));
+    for(let c=c0;c<=g.c2;c++)series.push({name:hdr?txt(g.r1,c):'Seri '+(c-c0+1),vals:[...Array(nR).keys()].map(i=>{const v=V(r0+i,c);return isNum(v)?v:null})})}
+  else{for(let c=c0;c<=g.c2;c++)cats.push(hdr?txt(g.r1,c):colName(c));
+    for(let r=r0;r<=g.r2;r++)series.push({name:cat?txt(r,g.c1):'Seri '+(r-r0+1),vals:[...Array(nC).keys()].map(i=>{const v=V(r,c0+i);return isNum(v)?v:null})})}
+  series=series.filter(s=>s.vals.some(v=>v!=null));
+  return{cats,series};
+}
+function nice(min,max,count){if(min===max){max=min+1}const span=max-min;const step0=span/count;const p=Math.pow(10,Math.floor(Math.log10(step0)));const e=step0/p;
+  const step=(e>=5?10:e>=2?5:e>=1?2:1)*p;const lo=Math.floor(min/step)*step,hi=Math.ceil(max/step)*step;const ticks=[];for(let v=lo;v<=hi+step/2;v+=step)ticks.push(+v.toPrecision(12));return{lo,hi,ticks}}
+function chartSVG(ch,W,H){
+  const d=chartData(ch.ref);
+  if(!d||!d.series.length)return`<svg viewBox="0 0 ${W} ${H}"><text x="${W/2}" y="${H/2}" text-anchor="middle" style="fill:var(--muted);font:13px var(--font)">Bu aralıkta sayı yok: ${esc(ch.ref)}</text></svg>`;
+  const T='style="fill:var(--muted);font:12px var(--font)"';
+  let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(ch.title||'Grafik')}">`;
+  // gösterge
+  const legendItems=ch.type==='pie'?d.cats:d.series.map(s=>s.name);let lx=12,ly=16;let leg='';
+  legendItems.forEach((n,i)=>{const w=Math.min(140,14+n.length*7+16);if(lx+w>W-8){lx=12;ly+=18}leg+=`<rect x="${lx}" y="${ly-9}" width="10" height="10" rx="2" style="fill:${PAL[i%PAL.length]}"/><text x="${lx+14}" y="${ly}" ${T}>${esc(n.length>18?n.slice(0,17)+'…':n)}</text>`;lx+=w});
+  svg+=leg;const top=ly+14;
+  if(ch.type==='pie'){
+    const vals=d.series[0].vals.map(v=>Math.max(0,v||0));const sum=vals.reduce((a,b)=>a+b,0)||1;const cx=W/2,cy=top+(H-top)/2,R=Math.max(10,Math.min(W/2-20,(H-top)/2-12));let a0=-Math.PI/2;
+    vals.forEach((v,i)=>{if(!v)return;const a1=a0+v/sum*Math.PI*2;const large=a1-a0>Math.PI?1:0;
+      const p=(a)=>`${cx+R*Math.cos(a)},${cy+R*Math.sin(a)}`;
+      svg+=vals.filter(x=>x).length===1?`<circle cx="${cx}" cy="${cy}" r="${R}" style="fill:${PAL[i%PAL.length]}"/>`:`<path d="M${cx},${cy} L${p(a0)} A${R},${R} 0 ${large} 1 ${p(a1)} Z" style="fill:${PAL[i%PAL.length]};stroke:var(--surface);stroke-width:2"/>`;
+      const am=(a0+a1)/2,pc=v/sum;if(pc>=0.05)svg+=`<text x="${cx+R*0.65*Math.cos(am)}" y="${cy+R*0.65*Math.sin(am)+4}" text-anchor="middle" style="fill:#fff;font:600 12px var(--font)">%${Math.round(pc*100)}</text>`;
+      a0=a1});
+    return svg+'</svg>';
+  }
+  const all=d.series.flatMap(s=>s.vals.filter(v=>v!=null));const mn=Math.min(0,...all),mx=Math.max(0,...all);
+  const sc=nice(mn,mx,5);const L=Math.max(40,8+Math.max(...sc.ticks.map(t=>cfmt.format(t).length))*7),Rm=12,B=36,Tp=top+4;
+  const pw=W-L-Rm,ph=H-Tp-B;const y=v=>Tp+ph-(v-sc.lo)/(sc.hi-sc.lo)*ph;
+  sc.ticks.forEach(t=>{svg+=`<line x1="${L}" x2="${W-Rm}" y1="${y(t)}" y2="${y(t)}" style="stroke:var(--grid);stroke-width:1"/><text x="${L-6}" y="${y(t)+4}" text-anchor="end" ${T}>${cfmt.format(t)}</text>`});
+  const n=d.cats.length,band=pw/n;
+  const step=Math.max(1,Math.ceil(n/Math.max(1,Math.floor(pw/70))));
+  d.cats.forEach((cname,i)=>{if(i%step)return;const s=cname.length>12?cname.slice(0,11)+'…':cname;svg+=`<text x="${L+band*i+band/2}" y="${H-B+16}" text-anchor="middle" ${T}>${esc(s)}</text>`});
+  if(ch.type==='line'){
+    d.series.forEach((s,si)=>{const col=PAL[si%PAL.length];let path='';s.vals.forEach((v,i)=>{if(v==null)return;path+=(path?'L':'M')+(L+band*i+band/2).toFixed(1)+','+y(v).toFixed(1)});
+      svg+=`<path d="${path}" style="fill:none;stroke:${col};stroke-width:2.5;stroke-linejoin:round"/>`;
+      s.vals.forEach((v,i)=>{if(v!=null)svg+=`<circle cx="${L+band*i+band/2}" cy="${y(v)}" r="3.5" style="fill:var(--surface);stroke:${col};stroke-width:2"><title>${esc(s.name)} · ${esc(d.cats[i])}: ${esc(fmtGen(v))}</title></circle>`})});
+  }else{
+    const ns=d.series.length,inner=band*0.78,bw=Math.max(2,inner/ns-2);
+    d.series.forEach((s,si)=>{const col=PAL[si%PAL.length];s.vals.forEach((v,i)=>{if(v==null)return;const x=L+band*i+(band-inner)/2+si*(inner/ns)+1;const y0=y(0),y1=y(v);
+      svg+=`<rect x="${x.toFixed(1)}" y="${Math.min(y0,y1).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1,Math.abs(y1-y0)).toFixed(1)}" rx="2" style="fill:${col}"><title>${esc(s.name)} · ${esc(d.cats[i])}: ${esc(fmtGen(v))}</title></rect>`})});
+  }
+  svg+=`<line x1="${L}" x2="${W-Rm}" y1="${y(0)}" y2="${y(0)}" style="stroke:var(--muted);stroke-width:1"/>`;
+  return svg+'</svg>';
+}
+function renderCharts(){
+  const s=sh();chartsEl.innerHTML='';
+  s.charts.forEach(ch=>{
+    const el=document.createElement('div');el.className='chart';el.dataset.id=ch.id;
+    Object.assign(el.style,{left:ch.x+'px',top:ch.y+'px',width:ch.w+'px',height:ch.h+'px'});
+    el.innerHTML=`<header><input class="ct" value="${esc(ch.title||'')}" placeholder="Grafik başlığı" aria-label="Grafik başlığı">
+      <input class="cr" value="${esc(ch.ref)}" aria-label="Veri aralığı" title="Veri aralığı" spellcheck="false">
+      <select aria-label="Grafik türü"><option value="bar">Sütun</option><option value="line">Çizgi</option><option value="pie">Pasta</option></select>
+      <button type="button" class="cdel" aria-label="Grafiği sil" title="Grafiği sil">✕</button></header><div class="cbody"></div><div class="crz" title="Boyutlandır"></div>`;
+    el.querySelector('select').value=ch.type;
+    chartsEl.appendChild(el);
+    el.querySelector('.cbody').innerHTML=chartSVG(ch,ch.w-2,ch.h-44);
+  });
+}
+const findChart=id=>sh().charts.find(c=>c.id===id);
+chartsEl.addEventListener('change',e=>{const el=e.target.closest('.chart');if(!el)return;const ch=findChart(el.dataset.id);
+  if(e.target.matches('select'))change(()=>{ch.type=e.target.value});
+  else if(e.target.classList.contains('ct'))change(()=>{ch.title=e.target.value});
+  else if(e.target.classList.contains('cr')){const g=parseRef(e.target.value);if(!g){toast('Aralık anlaşılamadı. Örnek: A1:D6');e.target.value=ch.ref;return}change(()=>{ch.ref=key(g.r1,g.c1)+':'+key(g.r2,g.c2)})}});
+chartsEl.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.matches('input'))e.target.blur()});
+chartsEl.addEventListener('click',e=>{if(e.target.classList.contains('cdel')){const id=e.target.closest('.chart').dataset.id;change(()=>{const s=sh();s.charts=s.charts.filter(c=>c.id!==id)});toast('Grafik silindi. Geri almak için Ctrl+Z')}});
+chartsEl.addEventListener('pointerdown',e=>{
+  const el=e.target.closest('.chart');if(!el)return;const ch=findChart(el.dataset.id);
+  const rz=e.target.classList.contains('crz');if(!rz&&(!e.target.closest('header')||e.target.closest('input,select,button')))return;
+  e.preventDefault();const x0=e.clientX,y0=e.clientY,o={...ch};el.setPointerCapture(e.pointerId);
+  const mv=ev=>{const dx=(ev.clientX-x0)/zoom,dy=(ev.clientY-y0)/zoom;
+    if(rz){el.style.width=Math.max(240,o.w+dx)+'px';el.style.height=Math.max(180,o.h+dy)+'px'}else{el.style.left=Math.max(0,o.x+dx)+'px';el.style.top=Math.max(0,o.y+dy)+'px'}};
+  const up=()=>{el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);
+    const nx=parseFloat(el.style.left),ny=parseFloat(el.style.top),nw=parseFloat(el.style.width),nh=parseFloat(el.style.height);
+    if(nx!==o.x||ny!==o.y||nw!==o.w||nh!==o.h)change(()=>{Object.assign(ch,{x:Math.round(nx),y:Math.round(ny),w:Math.round(nw),h:Math.round(nh)})})};
+  el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up);
+});
+$('bChart').onclick=()=>{
+  let g=range();if(g.r1===g.r2&&g.c1===g.c2){if(raw(sel.r,sel.c)===''){toast('Grafik için başlıklarıyla birlikte verileri seç');return}g=regionAround(sel.r,sel.c)}
+  const ref=key(g.r1,g.c1)+':'+key(g.r2,g.c2);const d=chartData(ref);if(!d||!d.series.length){toast('Seçimde grafiğe dökülecek sayı yok');return}
+  const R=cellRect(g.r1,g.c2);const x=Math.round(R.x+R.w+24),y=Math.max(10,Math.round(R.y));
+  change(()=>{sh().charts.push({id:'c'+Date.now().toString(36),type:'bar',ref,title:'',x,y,w:460,h:300})});
+  wrap.scrollLeft=Math.max(0,x*zoom-60);toast('Grafik eklendi. Türünü başlıktaki menüden değiştirebilirsin.');
+};
+
+/* ================= bul / değiştir ================= */
+const fb=$('findbar'),fIn=$('fIn'),rIn=$('rIn');
+function openFind(){fb.hidden=false;fIn.focus();fIn.select();countMatches()}
+$('bFind').onclick=openFind;$('fClose').onclick=()=>{fb.hidden=true};
+function matches(){const q=fIn.value.toLocaleLowerCase('tr');if(!q)return[];const s=sh(),out=[];
+  for(const [k,cell] of Object.entries(s.cells)){if(cell.v==null||cell.v==='')continue;const disp=display(valueOf(...Object.values(parseKey(k))),cell);
+    if(String(cell.v).toLocaleLowerCase('tr').includes(q)||disp.toLocaleLowerCase('tr').includes(q))out.push(parseKey(k))}
+  return out.sort((a,b)=>a.r-b.r||a.c-b.c)}
+function countMatches(){const n=matches().length;$('fcount').textContent=fIn.value?(n?`${n} sonuç`:'Sonuç yok'):''}
+fIn.addEventListener('input',countMatches);
+function findNext(){const m=matches();if(!m.length){toast('Sonuç bulunamadı');return false}
+  const nx=m.find(p=>p.r>sel.r||(p.r===sel.r&&p.c>sel.c))||m[0];select(nx.r,nx.c);ensureVisible(nx.r,nx.c);return true}
+$('fNext').onclick=findNext;
+fIn.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();findNext()}if(e.key==='Escape')fb.hidden=true});
+const reEsc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+$('fRep').onclick=()=>{const q=fIn.value;if(!q)return;const v=raw(sel.r,sel.c);const re=new RegExp(reEsc(q),'gi');
+  if(re.test(v)){change(()=>setRaw(sel.r,sel.c,v.replace(re,rIn.value)))}findNext();countMatches()};
+$('fAll').onclick=()=>{const q=fIn.value;if(!q)return;const re=new RegExp(reEsc(q),'gi');let n=0;
+  change(()=>{for(const [k,cell] of Object.entries(sh().cells)){const v=String(cell.v??'');const m=v.match(re);if(m){n+=m.length;cell.v=v.replace(re,rIn.value)}}});countMatches();toast(n?`${n} yer değiştirildi`:'Sonuç bulunamadı')};
+
+/* ================= pano ================= */
+let clip=null;
+const isTextTarget=t=>t&&t.closest&&t.closest('input,textarea,select,[contenteditable="true"]');
+function doCopy(e,cut){
+  if(isTextTarget(e.target))return;
+  const g=range(),s=sh(),lines=[],cells=[],html=['<table>'];
+  for(let r=g.r1;r<=g.r2;r++){if(hiddenRows.has(r))continue;const L=[],C=[];html.push('<tr>');for(let c=g.c1;c<=g.c2;c++){const cell=s.cells[key(r,c)];const t=cell?display(valueOf(r,c),cell):'';L.push(t);C.push(cell?JSON.parse(JSON.stringify(cell)):null);html.push(`<td>${esc(t)}</td>`)}lines.push(L.join('\t'));cells.push(C);html.push('</tr>')}
+  const tsv=lines.join('\n');e.clipboardData.setData('text/plain',tsv);e.clipboardData.setData('text/html',html.join('')+'</table>');e.preventDefault();
+  clip={tsv,r:g.r1,c:g.c1,cells,cut,si:state.si};
+  toast(cut?'Kesildi. Yapıştırmak için hedefi seçip Ctrl+V':'Kopyalandı');
+}
+document.addEventListener('copy',e=>doCopy(e,false));
+document.addEventListener('cut',e=>doCopy(e,true));
+document.addEventListener('paste',e=>{
+  if(isTextTarget(e.target))return;e.preventDefault();
+  const text=(e.clipboardData.getData('text/plain')||'').replace(/\r\n?/g,'\n').replace(/\n$/,'');
+  if(!text&&!clip)return;
+  const s=sh(),r0=sel.r,c0=sel.c;
+  const internal=clip&&text===clip.tsv;
+  const grid=internal?clip.cells:text.split('\n').map(l=>l.split('\t'));
+  const h=grid.length,w=Math.max(...grid.map(x=>x.length));
+  const grow=r0+h>s.rows||c0+w>s.cols;
+  change(()=>{
+    if(grow){s.rows=Math.max(s.rows,r0+h+20);s.cols=Math.max(s.cols,c0+w)}
+    if(internal){
+      const dr=r0-clip.r,dc=c0-clip.c;const src=state.sheets[clip.si];
+      if(clip.cut&&src)for(let i=0;i<h;i++)for(let j=0;j<clip.cells[i].length;j++)delete src.cells[key(clip.r+i,clip.c+j)];
+      grid.forEach((row,i)=>row.forEach((cell,j)=>{const k=key(r0+i,c0+j);if(!cell){delete s.cells[k];return}
+        const n=JSON.parse(JSON.stringify(cell));
+        if(!clip.cut&&isFormula(n.v))n.v=shiftFormula(n.v,dr,dc);
+        s.cells[k]=n}));
+    }else grid.forEach((row,i)=>row.forEach((v,j)=>setRaw(r0+i,c0+j,v.trim())));
+  },grow);
+  if(internal&&clip.cut)clip=null;
+  select(r0,c0,r0+h-1,c0+w-1);
+});
+
+/* ================= sayfa sekmeleri ================= */
+let delArm=-1;
+function renderTabs(){
+  tabsEl.innerHTML='';
+  state.sheets.forEach((s,i)=>{
+    const b=document.createElement('button');b.type='button';b.className='tab';b.setAttribute('role','tab');
+    b.setAttribute('aria-pressed',i===state.si);b.setAttribute('aria-selected',i===state.si);b.title='Yeniden adlandırmak için çift tıkla';
+    const sp=document.createElement('span');sp.textContent=s.name;b.appendChild(sp);
+    if(i===state.si&&state.sheets.length>1){const x=document.createElement('span');x.className='x';x.setAttribute('role','button');x.setAttribute('aria-label','Sayfayı sil');
+      x.textContent=delArm===i?'Silinsin mi?':'✕';x.onclick=ev=>{ev.stopPropagation();if(delArm===i){delArm=-1;
+        change(()=>{state.sheets.splice(i,1);state.si=Math.max(0,i-1)},true);renderTabs();toast('Sayfa silindi. Geri almak için Ctrl+Z')}else{delArm=i;renderTabs()}};b.appendChild(x)}
+    b.onclick=()=>{if(i===state.si)return;if(editing)commitEdit();delArm=-1;state.si=i;sel={r:0,c:0,er:0,ec:0};save();renderTabs();buildGrid();wrap.scrollTo(0,0)};
+    b.ondblclick=()=>{const inp=document.createElement('input');inp.value=s.name;inp.setAttribute('aria-label','Sayfa adı');sp.replaceWith(inp);inp.focus();inp.select();
+      const done=ok=>{const v=inp.value.trim();if(ok&&v&&v!==s.name)change(()=>{s.name=v.slice(0,40)});renderTabs()};
+      inp.onkeydown=ev=>{ev.stopPropagation();if(ev.key==='Enter')done(true);if(ev.key==='Escape')done(false)};inp.onblur=()=>done(true)};
+    tabsEl.appendChild(b);
+  });
+  const add=document.createElement('button');add.type='button';add.textContent='+ Sayfa';add.title='Yeni sayfa ekle';
+  add.onclick=()=>{let n=state.sheets.length+1;while(state.sheets.some(s=>s.name==='Sayfa'+n))n++;change(()=>{state.sheets.push(blankSheet('Sayfa'+n));state.si=state.sheets.length-1},true);sel={r:0,c:0,er:0,ec:0};renderTabs();buildGrid()};
+  tabsEl.appendChild(add);
+}
+
+/* ================= dosya ================= */
+let dlCap=null;
+try{if(window.claude&&window.claude.use)Promise.resolve(window.claude.use('downloads')).then(d=>{dlCap=d}).catch(()=>{})}catch(e){}
+async function saveFile(name,data,mime){
+  const blob=data instanceof Blob?data:new Blob([data],{type:mime||'application/octet-stream'});
+  if(dlCap){try{await dlCap.save({filename:name,data:blob});toast(name+' kaydedildi')}catch(e){if(!e||e.code!=='declined')toast('Bu görünümde indirme yapılamadı.')}return}
+  if(framed&&!dlCap){toast('Bu görünümde indirme kullanılamıyor. Uygulamayı yükleyip oradan indir.');return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+const safeName=s=>(s||'Cetvel').replace(/[\\/:*?"<>|]+/g,'_');
+function openFile(){if(!window.XLSX){toast('Dosya okuyucu yüklenemedi. İnternet bağlantını kontrol et.');return}$('file').click()}
+$('file').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)importFile(f)};
+function importFile(f){
+  if(!window.XLSX){toast('Dosya okuyucu yüklenemedi.');return}
+  const rd=new FileReader();
+  rd.onload=()=>{try{
+    const isCsv=/\.csv$/i.test(f.name);
+    const wb=isCsv?XLSX.read(new TextDecoder().decode(new Uint8Array(rd.result)).replace(/^﻿/,''),{type:'string',raw:true,FS:/;/.test(new TextDecoder().decode(new Uint8Array(rd.result.slice(0,2000))).split('\n')[0])?';':','})
+      :XLSX.read(new Uint8Array(rd.result),{type:'array',cellFormula:true,cellNF:true,cellStyles:true});
+    const added=[];const base=f.name.replace(/\.[^.]+$/,'');
+    wb.SheetNames.forEach(name=>{
+      const ws=wb.Sheets[name];if(!ws['!ref'])return;const R=XLSX.utils.decode_range(ws['!ref']);
+      const s=blankSheet((isCsv?base:name).slice(0,40));s.rows=Math.max(200,R.e.r+30);s.cols=Math.max(26,R.e.c+5);
+      for(const addr in ws){if(addr[0]==='!')continue;const cl=ws[addr];const p=XLSX.utils.decode_cell(addr);
+        let v,st={};
+        if(cl.f)v='='+toTurkish(cl.f);else if(cl.t==='b')v=cl.v?'DOĞRU':'YANLIŞ';else if(cl.t==='n'){v=String(cl.v).replace('.',',');
+          const z=String(cl.z||'');if(/[dmy]/i.test(z)&&!/[#0]/.test(z.replace(/\[[^\]]*\]/g,'')))st.fmt='date';else if(/%/.test(z))st.fmt='pct';else if(/₺|TL|\$|€/.test(z))st.fmt='cur';else if(/#,##0\.00|0\.00/.test(z))st.fmt='num';else if(/#,##0/.test(z))st.fmt='int'}
+        else v=cl.v;
+        if(cl.f&&cl.z){const z=String(cl.z);if(/[dmy]/i.test(z)&&!/[#0]/.test(z))st.fmt='date';else if(/%/.test(z))st.fmt='pct'}
+        if(v==null||v==='')continue;s.cells[key(p.r,p.c)]=Object.keys(st).length?{v:String(v),s:st}:{v:String(v)}}
+      (ws['!cols']||[]).forEach((c,i)=>{if(c&&(c.wpx||c.wch))s.colW[i]=Math.round(c.wpx||c.wch*7.5)});
+      (ws['!merges']||[]).forEach(m=>s.merges.push({r1:m.s.r,c1:m.s.c,r2:m.e.r,c2:m.e.c}));
+      added.push(s);
+    });
+    if(!added.length){toast('Dosyada veri bulunamadı');return}
+    change(()=>{state.sheets.push(...added);state.si=state.sheets.length-added.length},true);
+    sel={r:0,c:0,er:0,ec:0};renderTabs();buildGrid();toast(`${f.name} açıldı (${added.length} sayfa)`);
+  }catch(err){toast('Dosya okunamadı. .xlsx veya .csv olduğundan emin ol.')}};
+  rd.readAsArrayBuffer(f);
+}
+function evalAll(s,fn){const prev=evalSheet,pc=cache;evalSheet=s;cache=new Map();visiting.clear();try{return fn()}finally{evalSheet=prev;cache=pc}}
+function exportXlsx(){
+  if(!window.XLSX){toast('Excel kütüphanesi yüklenemedi. İnternet bağlantını kontrol et.');return}
+  const wb=XLSX.utils.book_new();
+  state.sheets.forEach((s,i)=>evalAll(s,()=>{
+    const ws={};let mr=0,mc=0;
+    for(const [k,cell] of Object.entries(s.cells)){if(cell.v===''||cell.v==null)continue;const p=parseKey(k);mr=Math.max(mr,p.r);mc=Math.max(mc,p.c);
+      const v=valueOf(p.r,p.c);const o={};const f=effFmt(cell),d=(cell.s||{}).dec;
+      if(typeof v==='number'){o.t='n';o.v=v;const dz=n=>n>0?'.'+'0'.repeat(n):'';
+        if(f==='num')o.z='#,##0'+dz(d??2);if(f==='int')o.z='#,##0'+dz(d??0);if(f==='cur')o.z='#,##0'+dz(d??2)+' "₺"';if(f==='pct')o.z='0'+dz(d??0)+'%';
+        if(f==='date')o.z='dd.mm.yyyy';if(f==='datel')o.z='d mmmm yyyy';if(f==='dt')o.z='dd.mm.yyyy hh:mm';if(!f&&d!=null)o.z='0'+dz(d)}
+      else if(typeof v==='boolean'){o.t='b';o.v=v}else if(isErr(v)){o.t='s';o.v=v.c}else{o.t='s';o.v=v==null?'':String(v)}
+      if(isFormula(cell.v)&&(cell.s||{}).fmt!=='text')o.f=toEnglish(cell.v.slice(1));ws[k]=o}
+    ws['!ref']='A1:'+key(Math.max(mr,0),Math.max(mc,0));ws['!cols']=Array.from({length:mc+1},(_,c)=>({wpx:s.colW[c]||110}));
+    if(s.merges.length)ws['!merges']=s.merges.map(m=>({s:{r:m.r1,c:m.c1},e:{r:m.r2,c:m.c2}}));
+    if(s.filter)ws['!autofilter']={ref:key(s.filter.r,s.filter.c1)+':'+key(Math.max(filterEnd(s),s.filter.r),s.filter.c2)};
+    XLSX.utils.book_append_sheet(wb,ws,s.name.replace(/[\\\/?*\[\]:]/g,'_').slice(0,31)||('Sayfa'+(i+1)));
+  }));
+  renderValues();renderSel();
+  const buf=XLSX.write(wb,{type:'array',bookType:'xlsx'});
+  saveFile('Cetvel.xlsx',new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));
+}
+function sheetCsv(){const s=sh(),u=usedRect(s);if(!u)return'';const rows=[];
+  for(let r=0;r<=u.r2;r++){const L=[];for(let c=0;c<=u.c2;c++){const cell=s.cells[key(r,c)];let t=cell?display(valueOf(r,c),cell):'';if(/[;"\n]/.test(t))t='"'+t.replace(/"/g,'""')+'"';L.push(t)}rows.push(L.join(';'))}return rows.join('\r\n')}
+function printSheet(){
+  if(framed){toast('Yazdırma bu görünümde kullanılamıyor. Uygulamayı yükleyince Ctrl+P ile yazdırabilir veya PDF kaydedebilirsin.');return}
+  const s=sh(),u=usedRect(s);if(!u){toast('Sayfa boş');return}
+  const covered=new Set();const span={};s.merges.forEach(m=>{span[key(m.r1,m.c1)]=m;for(let r=m.r1;r<=m.r2;r++)for(let c=m.c1;c<=m.c2;c++)if(r!==m.r1||c!==m.c1)covered.add(key(r,c))});
+  let h=`<h1>${esc(s.name)}</h1><table>`;
+  for(let r=0;r<=u.r2;r++){if(hiddenRows.has(r))continue;h+='<tr>';for(let c=0;c<=u.c2;c++){const k=key(r,c);if(covered.has(k))continue;const cell=s.cells[k],st=cell&&cell.s||{};const v=cell?valueOf(r,c):null;
+    let css=`min-width:${Math.round((s.colW[c]||110)*0.6)}px;`;if(st.b)css+='font-weight:700;';if(st.i)css+='font-style:italic;';if(st.u)css+='text-decoration:underline;';
+    css+=`text-align:${st.al||(typeof v==='number'?'right':'left')};`;if(st.bg)css+=`background:${st.bg};-webkit-print-color-adjust:exact;print-color-adjust:exact;`;if(st.fc)css+=`color:${st.fc};`;if(st.fs)css+=`font-size:${st.fs}pt;`;if(st.ff)css+=`font-family:${FONTS[st.ff]};`;
+    if(st.wrap)css+='white-space:normal;';if(st.bd){const b=st.bd;if(b.t)css+=`border-top:${b.t*0.75}pt solid #000;`;if(b.b)css+=`border-bottom:${b.b*0.75}pt solid #000;`;if(b.l)css+=`border-left:${b.l*0.75}pt solid #000;`;if(b.r)css+=`border-right:${b.r*0.75}pt solid #000;`}
+    const m=span[k];h+=`<td style="${css}"${m?` colspan="${m.c2-m.c1+1}" rowspan="${m.r2-m.r1+1}"`:''}>${cell?esc(display(v,cell)):''}</td>`}h+='</tr>'}
+  h+='</table>';s.charts.forEach(ch=>{h+=`<div class="pc" style="width:${ch.w}px;height:${ch.h-44}px">${ch.title?`<b>${esc(ch.title)}</b>`:''}${chartSVG(ch,ch.w,ch.h-44)}</div>`});
+  $('printArea').innerHTML=h;setTimeout(()=>{window.print();},50);
+}
+window.addEventListener('afterprint',()=>{$('printArea').innerHTML=''});
+function backup(){const d=new Date();saveFile(`Cetvel-yedek-${d.getFullYear()}-${two(d.getMonth()+1)}-${two(d.getDate())}.json`,JSON.stringify({app:'cetvel',version:1,saved:d.toISOString(),state}),'application/json')}
+$('fileBackup').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);
+  const st=d&&d.state;if(!st||!Array.isArray(st.sheets)||d.app!=='cetvel')throw 0;
+  ask('Yedekteki çalışma kitabı şu ankinin yerine geçecek. Gerekirse Ctrl+Z ile geri alabilirsin.',()=>{change(()=>{state=st;state.sheets.forEach(upgrade);state.si=0},true);sel={r:0,c:0,er:0,ec:0};renderTabs();buildGrid();toast('Yedek geri yüklendi')})}
+  catch(err){toast('Bu dosya bir Cetvel yedeği değil.')}};rd.readAsText(f)};
+$('bExport').onclick=exportXlsx;
+$('bFile').onclick=e=>{e.stopPropagation();const m=$('fileMenu');if(!m.hidden){m.hidden=true;return}closePops();m.hidden=false;const r=$('bFile').getBoundingClientRect();
+  m.style.left=Math.max(8,Math.min(innerWidth-m.offsetWidth-8,r.left))+'px';m.style.top=(r.bottom+4)+'px';m.querySelector('button').focus()};
+$('fileMenu').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(!b)return;$('fileMenu').hidden=true;const m=b.dataset.m;
+  if(m==='new')ask('Tüm sayfalar silinip boş bir çalışma kitabı açılacak. Önce yedek almak isteyebilirsin.',()=>{change(()=>{state={sheets:[blankSheet('Sayfa1')],si:0}},true);sel={r:0,c:0,er:0,ec:0};renderTabs();buildGrid()});
+  if(m==='open')openFile();if(m==='xlsx')exportXlsx();
+  if(m==='csv'){const t=sheetCsv();if(!t){toast('Sayfa boş');return}saveFile(safeName(sh().name)+'.csv','﻿'+t,'text/csv;charset=utf-8')}
+  if(m==='copycsv'){const t=sheetCsv().replace(/;/g,'\t');if(!t){toast('Sayfa boş');return}navigator.clipboard.writeText(t).then(()=>toast('Sayfa panoya kopyalandı. Excel\'e yapıştırabilirsin.'),()=>toast('Pano erişimi reddedildi. Hücreleri seçip Ctrl+C ile kopyala.'))}
+  if(m==='print')printSheet();if(m==='backup')backup();if(m==='restore')$('fileBackup').click()});
+$('fileMenu').addEventListener('keydown',e=>{const items=[...$('fileMenu').querySelectorAll('button')];const i=items.indexOf(document.activeElement);
+  if(e.key==='ArrowDown'){e.preventDefault();items[(i+1)%items.length].focus()}if(e.key==='ArrowUp'){e.preventDefault();items[(i-1+items.length)%items.length].focus()}if(e.key==='Escape'){$('fileMenu').hidden=true;$('bFile').focus()}});
+
+/* ================= yardım ================= */
+(()=>{const groups={};FN.forEach(f=>{(groups[f[4]]=groups[f[4]]||[]).push(f)});let h='';
+  for(const [g,list] of Object.entries(groups)){h+=`<h3>${esc(g)}</h3><table>`+list.map(f=>`<tr><td><code>${esc(f[0])}</code></td><td>${esc(f[3])}<br><span style="color:var(--muted);font-size:13px">${esc(f[0])}(${esc(f[2])}) · ${esc(f[1])}</span></td></tr>`).join('')+'</table>'}
+  $('fnHelp').innerHTML=h})();
+$('bHelp').onclick=()=>{$('help').hidden=false;$('helpClose').focus()};
+$('helpClose').onclick=()=>{$('help').hidden=true};
+$('help').addEventListener('click',e=>{if(e.target.id==='help')$('help').hidden=true});
+nameBox.addEventListener('focus',()=>nameBox.select());
+nameBox.addEventListener('blur',()=>renderSel());
+
+/* ================= uygulama olarak yükleme ================= */
+let installEvt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;$('bInstall').hidden=false});
+$('bInstall').onclick=async()=>{if(!installEvt)return;installEvt.prompt();const r=await installEvt.userChoice.catch(()=>null);installEvt=null;$('bInstall').hidden=true;if(r&&r.outcome==='accepted')toast('Cetvel yüklendi. Başlat menüsünden açabilirsin.')};
+if(!framed&&'serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+if('launchQueue' in window)launchQueue.setConsumer(async p=>{if(p.files&&p.files.length){for(const h of p.files){const f=await h.getFile();importFile(f)}}});
+
+renderTabs();buildGrid();
+window.__cetvel={valueOf:(a)=>{const p=parseKey(a);return valueOf(p.r,p.c)},state:()=>state,sel:()=>sel,toEnglish,toTurkish};
+})();
+</script>
+</body>
+</html>
