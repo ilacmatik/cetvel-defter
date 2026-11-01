@@ -1,5 +1,5 @@
 // Cetvel çevrimdışı önbellek
-const CACHE='cetvel-2026-11-01-1';
+const CACHE='cetvel-2026-11-01-2';
 const CORE=['./','./index.html','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/maskable-512.png'];
 const LIBS=["https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"];
 self.addEventListener('install',e=>{e.waitUntil((async()=>{const c=await caches.open(CACHE);await c.addAll(CORE);
